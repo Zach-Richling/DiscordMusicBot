@@ -1,8 +1,10 @@
-﻿using Discord;
+﻿using AngleSharp.Dom;
+using Discord;
 using Discord.Audio;
 using Discord.Interactions;
 using DiscordMusicBot.Core.Data;
 using DiscordMusicBot.Core.Data.Youtube;
+using DiscordMusicBot.Core.Models;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -35,8 +37,25 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         [SlashCommand("play", "Play a song.", runMode: RunMode.Async)]
         public async Task PlayAsync(string url)
         {
+            await PlayInnerAsync(url, false);
+        }
+
+        [SlashCommand("playtop", "Play a song at the top of the queue.", runMode: RunMode.Async)]
+        public async Task PlayTopAsync(string url)
+        {
+            if (_queue.Count() == 0)
+            {
+                await PlayInnerAsync(url, false);
+            } else 
+            {
+                await PlayInnerAsync(url, true);
+            }
+        }
+
+        private async Task PlayInnerAsync(string url, bool playTop)
+        {
             await DeferAsync();
-            
+
             var userChannel = (Context.User as IGuildUser)?.VoiceChannel;
             var guildId = Context.Interaction.GuildId;
 
@@ -53,23 +72,37 @@ namespace DiscordMusicBot.Client.InteractionHandlers
                 joinChannel = true;
             }
 
-            if (url.StartsWith("https://www.youtube.com/playlist?"))
+            if (url.StartsWith("https://www.youtube.com/playlist?") || url.Contains("&list"))
             {
-                var videos = await _youtubeDl.ParsePlaylist(url).ToListAsync();
-                foreach (var video in videos)
+                var songs = await _youtubeDl.ParsePlaylist(url).ToListAsync();
+                
+                if (playTop)
                 {
-                    _queue.Add(video);
+                    _queue.InsertRange(1, songs);
                 }
-                await FollowupAsync(videos.Count() + " songs added to the queue.");
+                else
+                {
+                    _queue.AddRange(songs);
+                }
+                
+                await FollowupAsync(songs.Count() + " songs added to the queue.");
             }
             else
             {
-                _queue.Add(url);
-                await FollowupAsync(url + " added to the queue.");
+                var song = await _youtubeDl.CreateSong(url);
+                if (playTop)
+                {
+                    _queue.Insert(1, song);
+                } 
+                else 
+                {
+                    _queue.Add(song);
+                }
+                await FollowupAsync(song.Name + " added to the queue.");
             }
 
             //If this is the first song to play, connect to the users voice chat and start processing the queue.
-            if (joinChannel) 
+            if (joinChannel)
             {
                 if (guildId.HasValue)
                 {
@@ -77,7 +110,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
                     await ProcessQueue(audioClient, Context, guildId.Value);
                     await audioClient.StopAsync();
                 }
-            } 
+            }
         }
 
         [SlashCommand("skip", "Skip a song.", runMode: RunMode.Async)]
@@ -98,20 +131,31 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         [SlashCommand("queue", "View the current queue.")]
         public async Task QueueAsync()
         {
-            Console.WriteLine("In Queue");
-            await RespondAsync("[" + String.Join(", ", _queue) + "]");
+            if (!_queue.Any())
+            {
+                await RespondAsync("No Songs in Queue.");
+                return;
+            }
+
+            var response = "Now Playing: " + _queue.First().Name;
+            response += Environment.NewLine + "Upcoming: " + Environment.NewLine;
+            response += string.Join(Environment.NewLine, _queue.Skip(1).Take(5).Select(x => x.Name));
+
+            TimeSpan totalTime = new TimeSpan(_queue.Sum(x => x.Length.Ticks));
+            response += Environment.NewLine + "Total Length: " + totalTime.ToString();
+            await RespondAsync(response);
         }
 
         private async Task ProcessQueue(IAudioClient audioClient, IInteractionContext context, ulong guildId)
         {
             while(_queue.Any())
             {
-                Console.WriteLine("Playing " + _queue.First());
+                Console.WriteLine("Playing " + _queue.First().Name);
 
                 var cancellationTokenSource = new CancellationTokenSource();
                 _cancellationTokens.TryAdd(guildId, cancellationTokenSource);
 
-                var audioFile = await StartAudioAsync(audioClient, _queue.First(), cancellationTokenSource.Token);
+                await StartAudioAsync(audioClient, _queue.First(), cancellationTokenSource.Token);
                 _queue.RemoveAt(0);
 
                 _cancellationTokens.Remove(guildId, out var oldCancellationSource);
@@ -136,17 +180,16 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             }
         }
 
-        private async Task<string> StartAudioAsync(IAudioClient audioClient, string path, CancellationToken cancellationToken)
+        private async Task StartAudioAsync(IAudioClient audioClient, Song song, CancellationToken cancellationToken)
         {
             string filePath = "";
             try
             {
-                filePath = await _youtubeDl.DownloadAudio(path);
+                filePath = await _youtubeDl.DownloadAudio(song.Url);
                 using (var ffmpeg = StartFFMPEG(filePath))
                 using (var outputStream = ffmpeg?.StandardOutput.BaseStream)
                 using (var discordStream = audioClient.CreatePCMStream(AudioApplication.Mixed))
                 {
-
                     try
                     {
                         if (outputStream != null)
@@ -160,9 +203,9 @@ namespace DiscordMusicBot.Client.InteractionHandlers
                         {
                             await discordStream.FlushAsync(cancellationToken);
                         }
-                        catch (Exception e)
+                        catch (OperationCanceledException e)
                         {
-                            Console.WriteLine(e.Message);
+                            //When FlushAsync is cancelled it throws an OperationCancelledException
                         }
                     }
                 }
@@ -171,8 +214,6 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             {
                 Console.WriteLine(e.Message);
             }
-
-            return filePath;
         }
     }
 }

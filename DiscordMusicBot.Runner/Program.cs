@@ -25,7 +25,7 @@ namespace DiscordMusicBot.Runner
 
             var discordConfig = new DiscordSocketConfig()
             {
-                LogLevel = Discord.LogSeverity.Verbose,
+                LogLevel = Discord.LogSeverity.Info,
                 UseInteractionSnowflakeDate = false
             };
 

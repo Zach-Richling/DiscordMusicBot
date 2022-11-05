@@ -27,6 +27,7 @@ namespace DiscordMusicBot.Client
         private async void LoginAndStart()
         {
             //Login using BotToken from appsettings.json and start bot
+            Directory.CreateDirectory(_config["SongDir"]);
             _discordClient.Log += LogAsync;
             await _discordClient.LoginAsync(TokenType.Bot, _config["BotToken"]);
             await _discordClient.StartAsync();

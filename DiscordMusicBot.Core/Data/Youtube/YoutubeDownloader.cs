@@ -1,19 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using YoutubeExplode;
+﻿using YoutubeExplode;
 using YoutubeExplode.Videos.Streams;
+using Microsoft.Extensions.Configuration;
+using DiscordMusicBot.Core.Models;
 
 namespace DiscordMusicBot.Core.Data.Youtube
 {
     public class YoutubeDownloader
     {
         private readonly YoutubeClient _client;
-        public YoutubeDownloader()
+        private readonly IConfiguration _config;
+        public YoutubeDownloader(IConfiguration config)
         {
             _client = new YoutubeClient();
+            _config = config;
         }
 
         public async Task<string> DownloadAudio(string url)
@@ -22,7 +21,7 @@ namespace DiscordMusicBot.Core.Data.Youtube
             {
                 var streamManifest = await _client.Videos.Streams.GetManifestAsync(url);
                 var audioStreamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
-                string filePath = Path.Combine("C:\\temp", Guid.NewGuid().ToString() + ".mp3");
+                string filePath = Path.Combine(_config["SongDir"], Guid.NewGuid().ToString() + ".mp3");
                 await _client.Videos.Streams.DownloadAsync(audioStreamInfo, filePath);
                 return filePath;
             } 
@@ -33,12 +32,17 @@ namespace DiscordMusicBot.Core.Data.Youtube
             }
         }
 
-        public async IAsyncEnumerable<string> ParsePlaylist(string url)
+        public async Task<Song> CreateSong(string url)
         {
-            var videos = _client.Playlists.GetVideosAsync(url);
-            await foreach (var video in videos)
+            var video = _client.Videos.GetAsync(url);
+            return new Song() { Url = video.Result.Url, Name = video.Result.Title, Length = video.Result.Duration ?? TimeSpan.MinValue };
+        }
+
+        public async IAsyncEnumerable<Song> ParsePlaylist(string url)
+        {
+            await foreach (var video in _client.Playlists.GetVideosAsync(url))
             {
-                yield return video.Url;
+                yield return new Song() { Url = video.Url, Name = video.Title, Length = video.Duration ?? TimeSpan.MinValue };
             }
         }
     }
