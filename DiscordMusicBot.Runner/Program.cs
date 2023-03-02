@@ -1,8 +1,8 @@
 ﻿using Discord.Interactions;
 using Discord.WebSocket;
 using DiscordMusicBot.Client;
-using DiscordMusicBot.Core.Data;
 using DiscordMusicBot.Core.Data.Youtube;
+using DiscordMusicBot.Core.Modules;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -34,14 +34,12 @@ namespace DiscordMusicBot.Runner
                 AutoServiceScopes = true
             };
 
-            var queue = new QueueList();
-
             services.AddSingleton<IConfiguration>(appconfig);
             services.AddSingleton(discordConfig);
             services.AddSingleton<BotClient>();
-            services.AddSingleton(queue);
             services.AddSingleton(interactionConfig);
             services.AddSingleton<YoutubeDownloader>();
+            services.AddSingleton<MusicModule>();
 
             return services.BuildServiceProvider();
         }

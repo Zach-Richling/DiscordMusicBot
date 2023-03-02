@@ -8,9 +8,13 @@ namespace DiscordMusicBot.Core.Models
 {
     public class Song
     {
-        public string Url { get; set; }
-        public string Name { get; set; }
+        public string Url { get; set; } = "";
+        public string Name { get; set; } = "";
         public TimeSpan Length { get; set; }
-        //public CancellationTokenSource TokenSource { get; set; } = new CancellationTokenSource();
+
+        public bool Downloading { get; set; }
+        public bool Downloaded { get; set; }
+        public string FilePath { get; set; } = "";
+        public Task? Download { get; set; } = null;
     }
 }

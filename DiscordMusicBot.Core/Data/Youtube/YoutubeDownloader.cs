@@ -15,30 +15,37 @@ namespace DiscordMusicBot.Core.Data.Youtube
             _config = config;
         }
 
-        public async Task<string> DownloadAudio(string url)
+        public async Task<List<Song>> ProcessURL(string url)
         {
-            try
+            if (url.StartsWith("https://www.youtube.com/playlist?") || url.Contains("&list"))
             {
-                var streamManifest = await _client.Videos.Streams.GetManifestAsync(url);
-                var audioStreamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
-                string filePath = Path.Combine(_config["SongDir"], Guid.NewGuid().ToString() + ".mp3");
-                await _client.Videos.Streams.DownloadAsync(audioStreamInfo, filePath);
-                return filePath;
-            } 
-            catch (Exception e)
+                return await ParsePlaylist(url).ToListAsync();
+            }
+            else
             {
-                Console.WriteLine(e.Message);
-                throw;
+                return new List<Song>() { await CreateSong(url) };
             }
         }
 
-        public async Task<Song> CreateSong(string url)
+        public async Task DownloadAudio(Song song, CancellationToken cancellationToken, IProgress<double>? progress = null)
         {
-            var video = _client.Videos.GetAsync(url);
-            return new Song() { Url = video.Result.Url, Name = video.Result.Title, Length = video.Result.Duration ?? TimeSpan.MinValue };
+            var streamManifest = await _client.Videos.Streams.GetManifestAsync(song.Url);
+            var audioStreamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
+            string filePath = Path.Combine(_config["SongDir"]!, $"{Guid.NewGuid()}.{audioStreamInfo.Container}");
+            song.Downloading = true;
+            song.FilePath = filePath;
+            await _client.Videos.Streams.DownloadAsync(audioStreamInfo, filePath, progress, cancellationToken);
+            song.Downloaded = false;
+            song.Downloaded = true;
         }
 
-        public async IAsyncEnumerable<Song> ParsePlaylist(string url)
+        private async Task<Song> CreateSong(string url)
+        {
+            var video = await _client.Videos.GetAsync(url);
+            return new Song() { Url = video.Url, Name = video.Title, Length = video.Duration ?? TimeSpan.MinValue };
+        }
+
+        private async IAsyncEnumerable<Song> ParsePlaylist(string url)
         {
             await foreach (var video in _client.Playlists.GetVideosAsync(url))
             {
