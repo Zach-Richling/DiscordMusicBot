@@ -16,5 +16,6 @@ namespace DiscordMusicBot.Core.Models
         public bool Downloaded { get; set; }
         public string FilePath { get; set; } = "";
         public Task? Download { get; set; } = null;
+        public CancellationTokenSource CancellationTokenSource { get; set; } = new();
     }
 }

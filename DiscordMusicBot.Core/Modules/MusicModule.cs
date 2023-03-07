@@ -27,14 +27,16 @@ namespace DiscordMusicBot.Core.Modules
 
         public void Play(IInteractionContext context, List<Song> songs, bool top) => GetOrAddGuild(context).Play(songs, top);
         public void Skip(IInteractionContext context) => GetOrAddGuild(context).Skip();
+        public void Skip(IInteractionContext context, int amount) => GetOrAddGuild(context).Skip(amount);
         public List<Song> Queue(IInteractionContext context) => GetOrAddGuild(context).GetQueue();
+        public void Clear(IInteractionContext context) => GetOrAddGuild(context).Clear();
 
         private class GuildMusicHandler
         {
             private ulong _guildId;
             private List<Song> _queue;
-            private Thread? _queueThread;
-            private Task? _nextDownload;
+            private Task? _queueTask;
+
             private CancellationTokenSource _tokenSource;
             private IAudioClient? _audioClient;
 
@@ -42,8 +44,9 @@ namespace DiscordMusicBot.Core.Modules
             private IInteractionContext _context;
             private readonly YoutubeDownloader _youtubeDl;
 
-            private object _lock = new();
+            private IUserMessage _nowPlayingMessage;
 
+            private object _lock = new();
             public GuildMusicHandler(IInteractionContext context, YoutubeDownloader youtubeDl, ulong guildId)
             {
                 _context = context;
@@ -60,6 +63,7 @@ namespace DiscordMusicBot.Core.Modules
                     if (top && _queue.Any())
                     {
                         _queue.InsertRange(1, songs);
+                        _queue[1].Download = _youtubeDl.DownloadAudio(_queue[1], _queue[1].CancellationTokenSource.Token);
                     }
                     else
                     {
@@ -72,6 +76,29 @@ namespace DiscordMusicBot.Core.Modules
 
             public void Skip() => _tokenSource.Cancel();
 
+            public void Skip(int amount)
+            {
+                lock(_lock)
+                {
+                    if (_queue.Count < 0) 
+                    {
+                        _queue.RemoveRange(1, Math.Min(amount - 1, _queue.Count));
+                        _tokenSource.Cancel();
+                    }
+                }
+            }
+
+            public void Clear()
+            {
+                lock (_lock)
+                {
+                    if (_queue.Count > 1) 
+                    {
+                        _queue.RemoveRange(1, _queue.Count - 1);
+                    }
+                }
+            }
+
             public List<Song> GetQueue()
             {
                 return _queue;
@@ -79,101 +106,109 @@ namespace DiscordMusicBot.Core.Modules
 
             private void StartQueueThread()
             {
-                if (_queueThread == null)
+                if (_queueTask == null || _queueTask.IsCompleted)
                 {
                     Console.WriteLine($"{_guildId}: Starting new thread");
-                    _queueThread = new Thread(async () => await ProcessQueue());
-                    _queueThread.Start();
+                    _queueTask = Task.Run(() => ProcessQueue());
                 }
             }
-
+            
             private async Task ProcessQueue()
             {
-                while (true) 
+                while (_queue.Any())
                 {
-                    while (_queue.Any())
+                    try
                     {
-                        try
+                        if (_tokenSource.IsCancellationRequested)
                         {
-                            if (_tokenSource.IsCancellationRequested)
-                            {
-                                _tokenSource = new();
-                            }
-
-                            Log($"Processing: {_queue.First().Name}");
-                            await StartAudioAsync(_queue.First(), null);
+                            _tokenSource = new();
                         }
-                        catch (Exception e)
-                        {
-                            Log(e.ToString());
-                        }
-                        finally
-                        {
-                            lock (_lock)
-                            {
-                                _queue.RemoveAt(0);
-                            }
 
-                            if (!_queue.Any())
+                        Log($"Processing: {_queue.First().Name}");
+                        await StartAudioAsync();
+                    }
+                    catch (Exception e)
+                    {
+                        Log(e.ToString());
+                    }
+                    finally
+                    {
+                        lock (_lock)
+                        {
+                            _queue.RemoveAt(0);
+                        }
+
+                        if (!_queue.Any())
+                        {
+                            Log("Finished Queue");
+                            if (_audioClient != null)
                             {
-                                Log("Finished Queue");
+                                await _audioClient.StopAsync();
+                                _audioClient.Dispose();
+                                _audioClient = null;
                             }
                         }
                     }
-                    Thread.Sleep(1000);
                 }
             }
 
-            private async Task StartAudioAsync(Song song, int? bitRate)
+            private async Task StartAudioAsync()
             {
                 var userChannel = (_context.User as IGuildUser)?.VoiceChannel;
+
+                Song currentSong = _queue[0];
+                var nextSong = _queue.Count > 1 ? _queue[1] : null;
 
                 if (userChannel == null)
                 {
                     return;
                 }
 
-
-                var progress = new Progress<double>(progress => Log(Math.Round(progress * 100, 2).ToString()));
                 if (_audioClient == null || (_audioClient != null && (_audioClient.ConnectionState == ConnectionState.Disconnected || _audioClient.ConnectionState == ConnectionState.Disconnecting)))
                 {
                     _audioClient = await userChannel.ConnectAsync();
                 }
 
-                Task? currentDownload = null;
-                if (song.Downloading && _nextDownload != null && !_nextDownload.IsCompleted)
+                if (currentSong.Download != null)
                 {
-                    Log("Waiting for next song");
-                    currentDownload = _nextDownload;
-                } 
-                else if ((!song.Downloading && !song.Downloaded) || (song.Downloading && _nextDownload != null && _nextDownload.IsCanceled))
-                {
-                    Log("Downloading current song");
-                    currentDownload = _youtubeDl.DownloadAudio(song, _tokenSource.Token, progress);
+                    currentSong.CancellationTokenSource = _tokenSource;
                 }
-                
-                if (_queue.Count > 1 && !_queue[1].Downloaded && !_queue[1].Downloading)
+
+                //Start current song download
+                if (currentSong.Download == null)
                 {
-                    if (_nextDownload == null || (_nextDownload != null && _nextDownload.IsCompleted))
+                    currentSong.CancellationTokenSource = _tokenSource;
+                    currentSong.Download = _youtubeDl.DownloadAudio(currentSong, currentSong.CancellationTokenSource.Token);
+                }
+
+                //Start next song download
+                if (nextSong != null && nextSong.Download == null)
+                {
+                    nextSong.Download = _youtubeDl.DownloadAudio(nextSong, nextSong.CancellationTokenSource.Token);
+                }
+
+                //Wait for current song download to finish
+                if (currentSong.Download != null)
+                {
+                    if (_tokenSource.IsCancellationRequested)
                     {
-                        Log("Downloading next song");
-                        _nextDownload = _youtubeDl.DownloadAudio(_queue[1], _tokenSource.Token, progress);
+                        currentSong.CancellationTokenSource.Cancel();
                     }
+
+                    await currentSong.Download;
                 }
 
-                if (currentDownload != null) 
-                {
-                    await currentDownload;
-                }
-
+                //If skip requested, download will cancel and return here.
                 if (_tokenSource.Token.IsCancellationRequested)
                 {
                     return;
                 }
 
+                await SendNowPlayingMessage(currentSong);
+
                 try
                 {
-                    using (Process ffmpeg = StartFFMPEG(song.FilePath, bitRate))
+                    using (Process ffmpeg = StartFFMPEG(currentSong.FilePath))
                     using (var outputStream = ffmpeg.StandardOutput.BaseStream)
                     using (var discordStream = _audioClient!.CreatePCMStream(AudioApplication.Mixed))
                     {
@@ -194,6 +229,21 @@ namespace DiscordMusicBot.Core.Modules
                 {
                     //Do nothing if operation is cancelled
                 }
+            }
+
+            private async Task SendNowPlayingMessage(Song song)
+            {
+                if (_nowPlayingMessage != null)
+                {
+                    await _nowPlayingMessage.DeleteAsync();
+                }
+
+                var builder = new EmbedBuilder();
+
+                builder.WithDescription($"**Now Playing:** {song.Name}");
+                builder.WithColor(Color.Orange);
+
+                _nowPlayingMessage = await _context.Channel.SendMessageAsync(embed: builder.Build());
             }
 
             private Process StartFFMPEG(string path, int? bitRate = null)
