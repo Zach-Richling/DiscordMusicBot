@@ -9,11 +9,10 @@ namespace DiscordMusicBot.Core.Data.Youtube
     public class YoutubeDownloader
     {
         private readonly YoutubeClient _client;
-        private readonly IConfiguration _config;
-        public YoutubeDownloader(IConfiguration config)
+
+        public YoutubeDownloader()
         {
             _client = new YoutubeClient();
-            _config = config;
         }
 
         public async Task<List<Song>> ProcessURL(string url)
@@ -28,29 +27,11 @@ namespace DiscordMusicBot.Core.Data.Youtube
             }
         }
 
-        public async Task DownloadAudio(Song song, CancellationToken cancellationToken)
+        public async Task<Stream> StreamAudio(Song song, CancellationToken cancellationToken)
         {
             var streamManifest = await _client.Videos.Streams.GetManifestAsync(song.Url);
             var audioStreamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
-            string filePath = Path.Combine(_config["SongDir"]!, $"{Guid.NewGuid()}.{audioStreamInfo.Container}");
-            song.FilePath = filePath;
-            Console.WriteLine($"Downloading {song.Name} to {Path.GetFileName(filePath)}");
-            await _client.Videos.Streams.DownloadAsync(audioStreamInfo, filePath, cancellationToken: cancellationToken);
-        }
-
-        public void DeleteAudioFiles(List<Song> exclude)
-        {
-            var files = Directory.GetFiles(_config["SongDir"]!, "*.*").Where(x => x.EndsWith(".mp3") || x.EndsWith(".mp4") || x.EndsWith(".webm")).Where(x => !exclude.Select(y => y.FilePath).Contains(x));
-
-            foreach (var file in files)
-            {
-                try
-                {
-                    File.Delete(file);
-                    Console.WriteLine($"Deleted {Path.GetFileName(file)}");
-                }
-                catch { }
-            }
+            return await _client.Videos.Streams.GetAsync(audioStreamInfo, cancellationToken);
         }
 
         private async Task<Song> CreateSong(string url)

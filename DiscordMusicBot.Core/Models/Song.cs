@@ -11,11 +11,6 @@ namespace DiscordMusicBot.Core.Models
         public string Url { get; set; } = "";
         public string Name { get; set; } = "";
         public TimeSpan Length { get; set; }
-
-        public bool Downloading { get; set; }
-        public bool Downloaded { get; set; }
-        public string FilePath { get; set; } = "";
-        public Task? Download { get; set; } = null;
-        public CancellationTokenSource CancellationTokenSource { get; set; } = new();
+        public Stream? AudioStream { get; set; }
     }
 }

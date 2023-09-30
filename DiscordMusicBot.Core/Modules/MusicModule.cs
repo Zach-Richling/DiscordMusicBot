@@ -1,5 +1,7 @@
-﻿using Discord;
+﻿using CliWrap;
+using Discord;
 using Discord.Audio;
+using Discord.Audio.Streams;
 using Discord.Commands;
 using DiscordMusicBot.Core.Data.Youtube;
 using DiscordMusicBot.Core.Models;
@@ -65,7 +67,6 @@ namespace DiscordMusicBot.Core.Modules
                     if (top && _queue.Any())
                     {
                         _queue.InsertRange(1, songs);
-                        _queue[1].Download = _youtubeDl.DownloadAudio(_queue[1], _queue[1].CancellationTokenSource.Token);
                     }
                     else
                     {
@@ -132,7 +133,7 @@ namespace DiscordMusicBot.Core.Modules
             {
                 if (_queueTask == null || _queueTask.IsCompleted)
                 {
-                    Console.WriteLine($"{_guildId}: Starting new thread");
+                    Log($"{_guildId}: Starting new thread");
                     _queueTask = Task.Run(() => ProcessQueue());
                 }
             }
@@ -159,9 +160,8 @@ namespace DiscordMusicBot.Core.Modules
                     {
                         lock (_lock)
                         {
-                            Console.WriteLine($"Removed {_queue[0].Name}");
+                            Log($"Removed {_queue[0].Name}");
                             _queue.RemoveAt(0);
-                            _youtubeDl.DeleteAudioFiles(_queue);
                         }
 
                         if (!_queue.Any())
@@ -197,35 +197,8 @@ namespace DiscordMusicBot.Core.Modules
                     _audioClient = await userChannel.ConnectAsync();
                 }
 
-                if (currentSong.Download != null)
-                {
-                    currentSong.CancellationTokenSource = _tokenSource;
-                }
-
-                //Start current song download
-                if (currentSong.Download == null)
-                {
-                    currentSong.CancellationTokenSource = _tokenSource;
-                    currentSong.Download = _youtubeDl.DownloadAudio(currentSong, currentSong.CancellationTokenSource.Token);
-                }
-
-                //Start next song download
-                if (nextSong != null && nextSong.Download == null)
-                {
-                    nextSong.Download = _youtubeDl.DownloadAudio(nextSong, nextSong.CancellationTokenSource.Token);
-                }
-
-                //Wait for current song download to finish
-                if (currentSong.Download != null)
-                {
-                    if (_tokenSource.IsCancellationRequested)
-                    {
-                        currentSong.CancellationTokenSource.Cancel();
-                    }
-
-                    await currentSong.Download;
-                }
-
+                currentSong.AudioStream = await _youtubeDl.StreamAudio(currentSong, _tokenSource.Token);
+                
                 //If skip requested, download will cancel and return here.
                 if (_tokenSource.Token.IsCancellationRequested)
                 {
@@ -234,18 +207,19 @@ namespace DiscordMusicBot.Core.Modules
 
                 await SendNowPlayingMessage(currentSong);
 
+                if (currentSong.AudioStream == null)
+                {
+                    return;
+                }
+
                 try
                 {
-                    using (Process ffmpeg = StartFFMPEG(currentSong.FilePath))
-                    using (var outputStream = ffmpeg.StandardOutput.BaseStream)
+                    using (var ffmpegStream = await StartFFMPEG(currentSong.AudioStream))
                     using (var discordStream = _audioClient!.CreatePCMStream(AudioApplication.Mixed))
                     {
                         try
                         {
-                            if (outputStream != null)
-                            {
-                                await outputStream.CopyToAsync(discordStream, _tokenSource.Token);
-                            }
+                            await discordStream.WriteAsync(ffmpegStream.ToArray(), 0, (int)ffmpegStream.Length, _tokenSource.Token);
                         }
                         finally
                         {
@@ -274,22 +248,17 @@ namespace DiscordMusicBot.Core.Modules
                 _nowPlayingMessage = await _context.Channel.SendMessageAsync(embed: builder.Build());
             }
 
-            private Process StartFFMPEG(string path, int? bitRate = null)
+            private async Task<MemoryStream> StartFFMPEG(Stream audioStream)
             {
-                var ffmpeg = Process.Start(new ProcessStartInfo
-                {
-                    FileName = "ffmpeg",
-                    Arguments = $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar {bitRate ?? 48000} pipe:1",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                });
+                MemoryStream ms = new MemoryStream();
 
-                if (ffmpeg == null)
-                {
-                    throw new NullReferenceException("FFMPEG could not start");
-                }
+                await Cli.Wrap("ffmpeg")
+                    .WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1")
+                    .WithStandardInputPipe(PipeSource.FromStream(audioStream))
+                    .WithStandardOutputPipe(PipeTarget.ToStream(ms))
+                    .ExecuteAsync();
 
-                return ffmpeg;
+                return ms;
             }
 
             private void Log(string message)
