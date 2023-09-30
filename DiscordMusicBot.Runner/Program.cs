@@ -1,4 +1,5 @@
-﻿using Discord.Interactions;
+﻿using Discord;
+using Discord.Interactions;
 using Discord.WebSocket;
 using DiscordMusicBot.Client;
 using DiscordMusicBot.Core.Data.Youtube;
@@ -26,7 +27,8 @@ namespace DiscordMusicBot.Runner
             var discordConfig = new DiscordSocketConfig()
             {
                 LogLevel = Discord.LogSeverity.Info,
-                UseInteractionSnowflakeDate = false
+                UseInteractionSnowflakeDate = false,
+                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
             };
 
             var interactionConfig = new InteractionServiceConfig()
@@ -40,6 +42,7 @@ namespace DiscordMusicBot.Runner
             services.AddSingleton(interactionConfig);
             services.AddSingleton<YoutubeDownloader>();
             services.AddSingleton<MusicModule>();
+            services.AddSingleton<MovieModule>();
 
             return services.BuildServiceProvider();
         }

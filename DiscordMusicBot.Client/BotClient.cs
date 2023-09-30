@@ -21,6 +21,7 @@ namespace DiscordMusicBot.Client
             _discordClient = new DiscordSocketClient(discordConfig);
             _serviceProvider = serviceProvider;
             _interactionConfig = interactionConfig;
+            _interactionService = new InteractionService(_discordClient, _interactionConfig);
             LoginAndStart();
         }
 
@@ -36,8 +37,6 @@ namespace DiscordMusicBot.Client
 
         private async Task Ready()
         {
-            //Set up slash commands using interaction service
-            _interactionService = new InteractionService(_discordClient, _interactionConfig);
             //Add all modules from DiscordMusicBot.Client
             await _interactionService.AddModulesAsync(Assembly.GetExecutingAssembly(), _serviceProvider);
             //Register commands to all guilds

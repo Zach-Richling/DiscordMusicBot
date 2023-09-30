@@ -19,12 +19,6 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             _musicModule = musicModule;
             _youtubeDl = youtubeDl;
         }
-        //TODO: Shuffle, 
-        [SlashCommand("ping", "Ping Pong!")]
-        public async Task PingAsync()
-        {
-            await RespondAsync("Pong!");
-        }
 
         [SlashCommand("play", "Play a song.", runMode: RunMode.Async)]
         public async Task PlayAsync(string url)
@@ -41,8 +35,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         private async Task PlayInnerAsync(string url, bool top)
         {
             await DeferAsync();
-            var builder = new EmbedBuilder();
-            builder.WithColor(Color.Orange);
+            var builder = InitializeEmbedBuilder();
 
             try
             {
@@ -70,16 +63,20 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         [SlashCommand("skip", "Skip a song.", runMode: RunMode.Async)]
         public async Task Skip()
         {
+            await DeferAsync();
+            var builder = InitializeEmbedBuilder();
+            builder.WithDescription($"Skipped Song");
+
             _musicModule.Skip(Context);
-            await RespondAsync("Song Skipped");
+
+            await FollowupAsync(embed: builder.Build());
         }
 
         [SlashCommand("skipmany", "Skip a number of songs.", runMode: RunMode.Async)]
         public async Task SkipManyAsync(int amount)
         {
             await DeferAsync();
-            var builder = new EmbedBuilder();
-            builder.WithColor(Color.Orange);
+            var builder = InitializeEmbedBuilder();
 
             if (amount <= 0)
             {
@@ -103,7 +100,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             var songs = _musicModule.Queue(Context);
             var listAmount = 10;
 
-            var builder = new EmbedBuilder();
+            var builder = InitializeEmbedBuilder();
 
             if (songs.Count > 0) 
             {
@@ -111,7 +108,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             }
 
             string songString = $"**Queued Songs**{Environment.NewLine}";
-            for (int i = 1; i < songs.Count - 1 && i <= listAmount; i++)
+            for (int i = 1; i < songs.Count && i <= listAmount; i++)
             {
                 songString += $"**{i}.** {songs[i].Name}{Environment.NewLine}";
             }
@@ -121,8 +118,9 @@ namespace DiscordMusicBot.Client.InteractionHandlers
                 songString += $"and {songs.Count - listAmount + 1} more";
             }
 
+            Console.WriteLine($"{Environment.NewLine}{string.Join(", ", songs.Select(x => x.Name))}");
+
             builder.AddField(zeroWidthSpace, songString);
-            builder.WithColor(Color.Orange);
 
             await FollowupAsync(embed: builder.Build());
         }
@@ -132,15 +130,32 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         {
             await DeferAsync();
             var songAmount = _musicModule.Queue(Context).Count;
-
+            
             _musicModule.Clear(Context);
 
-            var builder = new EmbedBuilder();
+            var builder = InitializeEmbedBuilder();
             builder.WithDescription($"Cleared {songAmount - 1} songs");
-            builder.WithColor(Color.Orange);
 
             await FollowupAsync(embed: builder.Build());
 
+        }
+
+        [SlashCommand("shuffle", "Shuffle songs in queue", runMode: RunMode.Async)]
+        public async Task ShuffleAsync()
+        {
+            await DeferAsync();
+
+            _musicModule.Shuffle(Context);
+
+            var builder = InitializeEmbedBuilder();
+            builder.WithDescription($"Shuffled Queue");
+
+            await FollowupAsync(embed: builder.Build());
+        }
+
+        private EmbedBuilder InitializeEmbedBuilder()
+        {
+            return new EmbedBuilder().WithColor(Color.Orange);
         }
     }
 }

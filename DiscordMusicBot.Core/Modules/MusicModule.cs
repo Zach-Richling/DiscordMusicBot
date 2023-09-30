@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Audio;
+using Discord.Commands;
 using DiscordMusicBot.Core.Data.Youtube;
 using DiscordMusicBot.Core.Models;
 using Newtonsoft.Json.Linq;
@@ -30,6 +31,7 @@ namespace DiscordMusicBot.Core.Modules
         public void Skip(IInteractionContext context, int amount) => GetOrAddGuild(context).Skip(amount);
         public List<Song> Queue(IInteractionContext context) => GetOrAddGuild(context).GetQueue();
         public void Clear(IInteractionContext context) => GetOrAddGuild(context).Clear();
+        public void Shuffle(IInteractionContext context) => GetOrAddGuild(context).Shuffle();
 
         private class GuildMusicHandler
         {
@@ -44,7 +46,7 @@ namespace DiscordMusicBot.Core.Modules
             private IInteractionContext _context;
             private readonly YoutubeDownloader _youtubeDl;
 
-            private IUserMessage _nowPlayingMessage;
+            private IUserMessage? _nowPlayingMessage;
 
             private object _lock = new();
             public GuildMusicHandler(IInteractionContext context, YoutubeDownloader youtubeDl, ulong guildId)
@@ -80,7 +82,7 @@ namespace DiscordMusicBot.Core.Modules
             {
                 lock(_lock)
                 {
-                    if (_queue.Count < 0) 
+                    if (_queue.Count < 1) 
                     {
                         _queue.RemoveRange(1, Math.Min(amount - 1, _queue.Count));
                         _tokenSource.Cancel();
@@ -95,6 +97,28 @@ namespace DiscordMusicBot.Core.Modules
                     if (_queue.Count > 1) 
                     {
                         _queue.RemoveRange(1, _queue.Count - 1);
+                    }
+                }
+            }
+
+            public void Shuffle()
+            {
+                var random = new Random();
+                lock(_lock)
+                {
+                    int count = _queue.Count;
+                    while (count > 2)
+                    {
+                        count--;
+                        int index = random.Next(count + 1);
+                        if (index == 0)
+                        {
+                            index++;
+                        }
+
+                        var value = _queue[index];
+                        _queue[index] = _queue[count];
+                        _queue[count] = value;
                     }
                 }
             }
@@ -135,7 +159,9 @@ namespace DiscordMusicBot.Core.Modules
                     {
                         lock (_lock)
                         {
+                            Console.WriteLine($"Removed {_queue[0].Name}");
                             _queue.RemoveAt(0);
+                            _youtubeDl.DeleteAudioFiles(_queue);
                         }
 
                         if (!_queue.Any())
@@ -148,6 +174,8 @@ namespace DiscordMusicBot.Core.Modules
                                 _audioClient = null;
                             }
                         }
+
+
                     }
                 }
             }
