@@ -3,7 +3,7 @@ using Discord;
 using Discord.Audio;
 using Discord.Audio.Streams;
 using Discord.Commands;
-using DiscordMusicBot.Core.Data.Youtube;
+using DiscordMusicBot.Core.Data;
 using DiscordMusicBot.Core.Models;
 using Newtonsoft.Json.Linq;
 using System;
@@ -17,8 +17,8 @@ namespace DiscordMusicBot.Core.Modules
     public class MusicModule
     {
         private ConcurrentDictionary<ulong, GuildMusicHandler> _guildHandlers = new();
-        private readonly YoutubeDownloader _youtubeDl;
-        public MusicModule(YoutubeDownloader youtubeDl)
+        private readonly MediaDownloader _youtubeDl;
+        public MusicModule(MediaDownloader youtubeDl)
         {
             _youtubeDl = youtubeDl;
         }
@@ -46,12 +46,12 @@ namespace DiscordMusicBot.Core.Modules
 
 
             private IInteractionContext _context;
-            private readonly YoutubeDownloader _youtubeDl;
+            private readonly MediaDownloader _youtubeDl;
 
             private IUserMessage? _nowPlayingMessage;
 
             private object _lock = new();
-            public GuildMusicHandler(IInteractionContext context, YoutubeDownloader youtubeDl, ulong guildId)
+            public GuildMusicHandler(IInteractionContext context, MediaDownloader youtubeDl, ulong guildId)
             {
                 _context = context;
                 _youtubeDl = youtubeDl;
@@ -133,7 +133,7 @@ namespace DiscordMusicBot.Core.Modules
             {
                 if (_queueTask == null || _queueTask.IsCompleted)
                 {
-                    Log($"{_guildId}: Starting new thread");
+                    Log($"{_guildId}: Starting new queue task");
                     _queueTask = Task.Run(() => ProcessQueue());
                 }
             }
@@ -237,7 +237,10 @@ namespace DiscordMusicBot.Core.Modules
             {
                 if (_nowPlayingMessage != null)
                 {
-                    await _nowPlayingMessage.DeleteAsync();
+                    try
+                    {
+                        await _nowPlayingMessage.DeleteAsync();
+                    } catch { _nowPlayingMessage = null; }
                 }
 
                 var builder = new EmbedBuilder();

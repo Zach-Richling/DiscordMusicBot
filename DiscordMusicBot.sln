@@ -5,9 +5,9 @@ VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DiscordMusicBot.Runner", "DiscordMusicBot.Runner\DiscordMusicBot.Runner.csproj", "{6760DD8B-39DD-4719-A98A-0F1AE22F7AD2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiscordMusicBot.Client", "DiscordMusicBot.Client\DiscordMusicBot.Client.csproj", "{131927B2-29F5-45E6-A5FA-25D6D9082971}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DiscordMusicBot.Client", "DiscordMusicBot.Client\DiscordMusicBot.Client.csproj", "{131927B2-29F5-45E6-A5FA-25D6D9082971}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiscordMusicBot.Core", "DiscordMusicBot.Core\DiscordMusicBot.Core.csproj", "{DCC4AFEB-DFCB-4A2A-8D3A-15F7D3C91941}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DiscordMusicBot.Core", "DiscordMusicBot.Core\DiscordMusicBot.Core.csproj", "{DCC4AFEB-DFCB-4A2A-8D3A-15F7D3C91941}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

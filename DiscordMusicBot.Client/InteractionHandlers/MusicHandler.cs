@@ -1,6 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
-using DiscordMusicBot.Core.Data.Youtube;
+using DiscordMusicBot.Core.Data;
 using DiscordMusicBot.Core.Models;
 using DiscordMusicBot.Core.Modules;
 using Microsoft.Extensions.Configuration;
@@ -11,10 +11,10 @@ namespace DiscordMusicBot.Client.InteractionHandlers
     public class MusicHandler : InteractionModuleBase
     {
         private readonly MusicModule _musicModule;
-        private readonly YoutubeDownloader _youtubeDl;
+        private readonly MediaDownloader _youtubeDl;
         private readonly string zeroWidthSpace = '\u200b'.ToString();
 
-        public MusicHandler(MusicModule musicModule, YoutubeDownloader youtubeDl)
+        public MusicHandler(MusicModule musicModule, MediaDownloader youtubeDl)
         {
             _musicModule = musicModule;
             _youtubeDl = youtubeDl;
@@ -48,13 +48,13 @@ namespace DiscordMusicBot.Client.InteractionHandlers
                 }
                 else
                 {
-                    builder.WithDescription($"{songs[0].Name} added.");
+                    builder.WithDescription($"{songs.Count} songs added.");
                 }
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
-                builder.WithDescription("Error when adding songs. Was that a youtube link?");
+                builder.WithDescription("Error when adding songs. Was that a youtube/soundcloud link?");
             }
 
             await FollowupAsync(embed: builder.Build());
@@ -65,8 +65,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         {
             await DeferAsync();
             var builder = InitializeEmbedBuilder();
-            builder.WithDescription($"Skipped Song");
-
+            builder.WithDescription("Song Skipped");
             _musicModule.Skip(Context);
 
             await FollowupAsync(embed: builder.Build());

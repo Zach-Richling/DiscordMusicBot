@@ -2,7 +2,7 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using DiscordMusicBot.Client;
-using DiscordMusicBot.Core.Data.Youtube;
+using DiscordMusicBot.Core.Data;
 using DiscordMusicBot.Core.Modules;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,7 +40,7 @@ namespace DiscordMusicBot.Runner
             services.AddSingleton(discordConfig);
             services.AddSingleton<BotClient>();
             services.AddSingleton(interactionConfig);
-            services.AddSingleton<YoutubeDownloader>();
+            services.AddSingleton<MediaDownloader>();
             services.AddSingleton<MusicModule>();
             services.AddSingleton<MovieModule>();
 

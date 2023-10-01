@@ -1,5 +1,5 @@
 ﻿using Discord;
-using DiscordMusicBot.Core.Data.Youtube;
+using DiscordMusicBot.Core.Data;
 using DiscordMusicBot.Core.Models;
 using System;
 using System.Collections.Concurrent;
