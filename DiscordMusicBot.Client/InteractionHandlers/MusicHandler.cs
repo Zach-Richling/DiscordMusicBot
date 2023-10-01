@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using DiscordMusicBot.Core.Data;
+using DiscordMusicBot.Core.Enums;
 using DiscordMusicBot.Core.Models;
 using DiscordMusicBot.Core.Modules;
 using Microsoft.Extensions.Configuration;
@@ -12,12 +13,14 @@ namespace DiscordMusicBot.Client.InteractionHandlers
     {
         private readonly MusicModule _musicModule;
         private readonly MediaDownloader _youtubeDl;
+        private readonly IConfiguration _config;
         private readonly string zeroWidthSpace = '\u200b'.ToString();
 
-        public MusicHandler(MusicModule musicModule, MediaDownloader youtubeDl)
+        public MusicHandler(MusicModule musicModule, MediaDownloader youtubeDl, IConfiguration appConfig)
         {
             _musicModule = musicModule;
             _youtubeDl = youtubeDl;
+            _config = appConfig;
         }
 
         [SlashCommand("play", "Play a song.", runMode: RunMode.Async)]
@@ -44,7 +47,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
 
                 if (songs.Count == 1)
                 {
-                    builder.WithDescription($"{songs[0].Name} added.");
+                    builder.WithDescription($"{NameWithEmoji(songs[0])} added.");
                 }
                 else
                 {
@@ -103,21 +106,19 @@ namespace DiscordMusicBot.Client.InteractionHandlers
 
             if (songs.Count > 0) 
             {
-                builder.AddField("Now Playing", songs[0].Name);
+                builder.AddField("Now Playing", NameWithEmoji(songs[0]));
             }
 
             string songString = $"**Queued Songs**{Environment.NewLine}";
             for (int i = 1; i < songs.Count && i <= listAmount; i++)
             {
-                songString += $"**{i}.** {songs[i].Name}{Environment.NewLine}";
+                songString += $"**{i}.** {NameWithEmoji(songs[i])}{Environment.NewLine}";
             }
 
             if (songs.Count > listAmount + 1)
             {
                 songString += $"and {songs.Count - listAmount + 1} more";
             }
-
-            Console.WriteLine($"{Environment.NewLine}{string.Join(", ", songs.Select(x => x.Name))}");
 
             builder.AddField(zeroWidthSpace, songString);
 
@@ -155,6 +156,17 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         private EmbedBuilder InitializeEmbedBuilder()
         {
             return new EmbedBuilder().WithColor(Color.Orange);
+        }
+
+        private string NameWithEmoji(Song song)
+        {
+            string emoji = song.Source switch
+            {
+                SongSource.Youtube => _config["YoutubeEmoji"] ?? "",
+                SongSource.SoundCloud => _config["SoundCloudEmoji"] ?? "",
+                _ => ""
+            };
+            return $"{emoji} {song.Name}";
         }
     }
 }
