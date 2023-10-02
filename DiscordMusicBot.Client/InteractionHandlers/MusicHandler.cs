@@ -43,7 +43,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             try
             {
                 var songs = await _youtubeDl.ProcessURL(url);
-                _musicModule.Play(Context, songs, true);
+                await _musicModule.Play(Context, songs, true);
 
                 if (songs.Count == 1)
                 {
@@ -69,7 +69,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             await DeferAsync();
             var builder = InitializeEmbedBuilder();
             builder.WithDescription("Song Skipped");
-            _musicModule.Skip(Context);
+            await _musicModule.Skip(Context);
 
             await FollowupAsync(embed: builder.Build());
         }
@@ -87,8 +87,8 @@ namespace DiscordMusicBot.Client.InteractionHandlers
                 return;
             }
 
-            var songs = _musicModule.Queue(Context);
-            _musicModule.Skip(Context, amount);
+            var songs = await _musicModule.Queue(Context);
+            await _musicModule.Skip(Context, amount);
 
             builder.WithDescription($"**Skipped** {Math.Min(songs.Count, amount)}");
 
@@ -99,7 +99,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         public async Task QueueAsync()
         {
             await DeferAsync();
-            var songs = _musicModule.Queue(Context);
+            var songs = await _musicModule.Queue(Context);
             var listAmount = 10;
 
             var builder = InitializeEmbedBuilder();
@@ -129,9 +129,9 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         public async Task ClearAsync()
         {
             await DeferAsync();
-            var songAmount = _musicModule.Queue(Context).Count;
+            var songAmount = (await _musicModule.Queue(Context)).Count;
             
-            _musicModule.Clear(Context);
+            await _musicModule.Clear(Context);
 
             var builder = InitializeEmbedBuilder();
             builder.WithDescription($"Cleared {songAmount - 1} songs");
@@ -145,7 +145,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         {
             await DeferAsync();
 
-            _musicModule.Shuffle(Context);
+            await _musicModule.Shuffle(Context);
 
             var builder = InitializeEmbedBuilder();
             builder.WithDescription($"Shuffled Queue");

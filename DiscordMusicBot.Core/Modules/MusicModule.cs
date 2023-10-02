@@ -28,12 +28,12 @@ namespace DiscordMusicBot.Core.Modules
             return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMusicHandler(context, _youtubeDl, context.Guild.Id));
         }
 
-        public void Play(IInteractionContext context, List<Song> songs, bool top) => GetOrAddGuild(context).Play(songs, top);
-        public void Skip(IInteractionContext context) => GetOrAddGuild(context).Skip();
-        public void Skip(IInteractionContext context, int amount) => GetOrAddGuild(context).Skip(amount);
-        public List<Song> Queue(IInteractionContext context) => GetOrAddGuild(context).GetQueue();
-        public void Clear(IInteractionContext context) => GetOrAddGuild(context).Clear();
-        public void Shuffle(IInteractionContext context) => GetOrAddGuild(context).Shuffle();
+        public async Task Play(IInteractionContext context, List<Song> songs, bool top) => await GetOrAddGuild(context).Play(songs, top);
+        public async Task Skip(IInteractionContext context) => await GetOrAddGuild(context).Skip();
+        public async Task Skip(IInteractionContext context, int amount) => await GetOrAddGuild(context).Skip(amount);
+        public async Task<List<Song>> Queue(IInteractionContext context) => await GetOrAddGuild(context).GetQueue();
+        public async Task Clear(IInteractionContext context) => await GetOrAddGuild(context).Clear();
+        public async Task Shuffle(IInteractionContext context) => await GetOrAddGuild(context).Shuffle();
 
         private class GuildMusicHandler
         {
@@ -60,7 +60,7 @@ namespace DiscordMusicBot.Core.Modules
                 _tokenSource = new();
             }
 
-            public void Play(List<Song> songs, bool top)
+            public async Task Play(List<Song> songs, bool top)
             {
                 lock (_lock) 
                 {
@@ -74,12 +74,16 @@ namespace DiscordMusicBot.Core.Modules
                     }
                 }
 
-                StartQueueThread();
+                await StartQueueThread();
             }
 
-            public void Skip() => _tokenSource.Cancel();
+            public async Task Skip()
+            {
+                _tokenSource.Cancel();
+                await Task.CompletedTask;
+            }
 
-            public void Skip(int amount)
+            public async Task Skip(int amount)
             {
                 lock(_lock)
                 {
@@ -89,9 +93,11 @@ namespace DiscordMusicBot.Core.Modules
                         _tokenSource.Cancel();
                     }
                 }
+
+                await Task.CompletedTask;
             }
 
-            public void Clear()
+            public async Task Clear()
             {
                 lock (_lock)
                 {
@@ -100,9 +106,11 @@ namespace DiscordMusicBot.Core.Modules
                         _queue.RemoveRange(1, _queue.Count - 1);
                     }
                 }
+
+                await Task.CompletedTask;
             }
 
-            public void Shuffle()
+            public async Task Shuffle()
             {
                 var random = new Random();
                 lock(_lock)
@@ -122,20 +130,24 @@ namespace DiscordMusicBot.Core.Modules
                         _queue[count] = value;
                     }
                 }
+
+                await Task.CompletedTask;
             }
 
-            public List<Song> GetQueue()
+            public async Task<List<Song>> GetQueue()
             {
-                return _queue;
+                return await Task.FromResult(_queue);
             }
 
-            private void StartQueueThread()
+            private async Task StartQueueThread()
             {
                 if (_queueTask == null || _queueTask.IsCompleted)
                 {
                     Log($"{_guildId}: Starting new queue task");
-                    _queueTask = Task.Run(() => ProcessQueue());
+                    _queueTask = ProcessQueue();
                 }
+
+                await Task.CompletedTask;
             }
             
             private async Task ProcessQueue()
@@ -162,6 +174,8 @@ namespace DiscordMusicBot.Core.Modules
                         {
                             Log($"Removed {_queue[0].Name}");
                             _queue.RemoveAt(0);
+                            _queue.TrimExcess();
+                            GC.Collect();
                         }
 
                         if (!_queue.Any())
@@ -174,8 +188,6 @@ namespace DiscordMusicBot.Core.Modules
                                 _audioClient = null;
                             }
                         }
-
-
                     }
                 }
             }
