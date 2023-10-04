@@ -3,12 +3,8 @@ using YoutubeExplode.Videos.Streams;
 using DiscordMusicBot.Core.Models;
 using DiscordMusicBot.Core.Enums;
 using SoundCloudExplode;
-using System;
 using DiscordMusicBot.Core.Extensions;
-using YoutubeExplode.Videos;
-using Microsoft.Extensions.Configuration;
 using SpotifyExplode;
-using System.Threading;
 
 namespace DiscordMusicBot.Core.Data
 {
@@ -17,14 +13,12 @@ namespace DiscordMusicBot.Core.Data
         private readonly YoutubeClient _youtubeClient;
         private readonly SoundCloudClient _soundcloudClient;
         private readonly SpotifyClient _spotifyClient;
-        private readonly IConfiguration _appConfig;
 
-        public MediaDownloader(IConfiguration appConfig)
+        public MediaDownloader()
         {
             _youtubeClient = new YoutubeClient();
             _soundcloudClient = new SoundCloudClient();
             _spotifyClient = new SpotifyClient();
-            _appConfig = appConfig;
         }
 
         public async Task<List<Song>> ProcessURL(string url)
