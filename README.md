@@ -3,9 +3,9 @@
 ## Setup
 appsettings.json must be created in DiscordMusicBot.Runner root folder including the following:
 - BotToken: Token used to authenticate with discord bot user.
-- YoutubeEmoji: Identifier for youtube discord emoji. String of the form "<"EmojiName:EmojiId>"
-- SoundCloudEmoji: Identifier for soundcloud discord emoji. String of the form "<"EmojiName:EmojiId>"
-- SpotifyEmoji: Identifier for spotify discord emoji. String of the form "<"EmojiName:EmojiId>"
+- YoutubeEmoji: Identifier for youtube discord emoji. String of the form "<":EmojiName:EmojiId>"
+- SoundCloudEmoji: Identifier for soundcloud discord emoji. String of the form "<":EmojiName:EmojiId>"
+- SpotifyEmoji: Identifier for spotify discord emoji. String of the form "<":EmojiName:EmojiId>"
 
 ## Publish and Deployment
 ### Windows
