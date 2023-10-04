@@ -43,7 +43,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             try
             {
                 var songs = await _youtubeDl.ProcessURL(url);
-                await _musicModule.Play(Context, songs, true);
+                await _musicModule.Play(Context, songs, top);
 
                 if (songs.Count == 1)
                 {
@@ -164,6 +164,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             {
                 SongSource.Youtube => _config["YoutubeEmoji"] ?? "",
                 SongSource.SoundCloud => _config["SoundCloudEmoji"] ?? "",
+                SongSource.Spotify => _config["SpotifyEmoji"] ?? "",
                 _ => ""
             };
             return $"{emoji} {song.Name}";

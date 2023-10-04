@@ -9,6 +9,7 @@ namespace DiscordMusicBot.Core.Enums
     public enum SongSource
     {
         Youtube,
-        SoundCloud
+        SoundCloud,
+        Spotify
     }
 }

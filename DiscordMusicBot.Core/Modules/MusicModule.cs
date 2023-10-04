@@ -17,15 +17,15 @@ namespace DiscordMusicBot.Core.Modules
     public class MusicModule
     {
         private ConcurrentDictionary<ulong, GuildMusicHandler> _guildHandlers = new();
-        private readonly MediaDownloader _youtubeDl;
-        public MusicModule(MediaDownloader youtubeDl)
+        private readonly MediaDownloader _mediaDl;
+        public MusicModule(MediaDownloader mediaDl)
         {
-            _youtubeDl = youtubeDl;
+            _mediaDl = mediaDl;
         }
 
         private GuildMusicHandler GetOrAddGuild(IInteractionContext context) 
         {
-            return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMusicHandler(context, _youtubeDl, context.Guild.Id));
+            return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMusicHandler(context, _mediaDl, context.Guild.Id));
         }
 
         public async Task Play(IInteractionContext context, List<Song> songs, bool top) => await GetOrAddGuild(context).Play(songs, top);
@@ -46,15 +46,15 @@ namespace DiscordMusicBot.Core.Modules
 
 
             private IInteractionContext _context;
-            private readonly MediaDownloader _youtubeDl;
+            private readonly MediaDownloader _mediaDl;
 
             private IUserMessage? _nowPlayingMessage;
 
             private object _lock = new();
-            public GuildMusicHandler(IInteractionContext context, MediaDownloader youtubeDl, ulong guildId)
+            public GuildMusicHandler(IInteractionContext context, MediaDownloader mediaDl, ulong guildId)
             {
                 _context = context;
-                _youtubeDl = youtubeDl;
+                _mediaDl = mediaDl;
                 _guildId = guildId;
                 _queue = new();
                 _tokenSource = new();
@@ -197,7 +197,6 @@ namespace DiscordMusicBot.Core.Modules
                 var userChannel = (_context.User as IGuildUser)?.VoiceChannel;
 
                 Song currentSong = _queue[0];
-                var nextSong = _queue.Count > 1 ? _queue[1] : null;
 
                 if (userChannel == null)
                 {
@@ -209,20 +208,14 @@ namespace DiscordMusicBot.Core.Modules
                     _audioClient = await userChannel.ConnectAsync();
                 }
 
-                currentSong.AudioStream = await _youtubeDl.StreamAudio(currentSong, _tokenSource.Token);
+                currentSong.AudioStream = await _mediaDl.StreamAudio(currentSong, _tokenSource.Token);
                 
-                //If skip requested, download will cancel and return here.
-                if (_tokenSource.Token.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                await SendNowPlayingMessage(currentSong);
-
                 if (currentSong.AudioStream == null)
                 {
                     return;
                 }
+
+                IUserMessage nowPlayingMessage = await SendNowPlayingMessage(currentSong);
 
                 try
                 {
@@ -243,24 +236,20 @@ namespace DiscordMusicBot.Core.Modules
                 {
                     //Do nothing if operation is cancelled
                 }
+
+                try
+                {
+                    await nowPlayingMessage.DeleteAsync();
+                }
+                catch { }
             }
 
-            private async Task SendNowPlayingMessage(Song song)
+            private async Task<IUserMessage> SendNowPlayingMessage(Song song)
             {
-                if (_nowPlayingMessage != null)
-                {
-                    try
-                    {
-                        await _nowPlayingMessage.DeleteAsync();
-                    } catch { _nowPlayingMessage = null; }
-                }
-
                 var builder = new EmbedBuilder();
-
                 builder.WithDescription($"**Now Playing:** {song.Name}");
                 builder.WithColor(Color.Orange);
-
-                _nowPlayingMessage = await _context.Channel.SendMessageAsync(embed: builder.Build());
+                return await _context.Channel.SendMessageAsync(embed: builder.Build());
             }
 
             private async Task<MemoryStream> StartFFMPEG(Stream audioStream)

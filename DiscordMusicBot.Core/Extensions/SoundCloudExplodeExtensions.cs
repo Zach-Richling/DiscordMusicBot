@@ -14,7 +14,7 @@ namespace DiscordMusicBot.Core.Extensions
 {
     public static class SoundCloudExplodeExtensions
     {
-        public static HttpClient _httpClient = new HttpClient();
+        private static HttpClient _httpClient = new HttpClient();
         public static async Task<Stream> GetStreamAsync(this SoundCloudClient client, string url, CancellationToken cancellationToken)
         {
             var downloadURL = await client.Tracks.GetDownloadUrlAsync(url);
