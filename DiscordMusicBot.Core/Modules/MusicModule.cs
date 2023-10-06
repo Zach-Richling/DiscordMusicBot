@@ -48,8 +48,6 @@ namespace DiscordMusicBot.Core.Modules
             private IInteractionContext _context;
             private readonly MediaDownloader _mediaDl;
 
-            private IUserMessage? _nowPlayingMessage;
-
             private object _lock = new();
             public GuildMusicHandler(IInteractionContext context, MediaDownloader mediaDl, ulong guildId)
             {

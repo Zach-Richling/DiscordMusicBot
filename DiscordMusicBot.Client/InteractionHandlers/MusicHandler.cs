@@ -106,19 +106,27 @@ namespace DiscordMusicBot.Client.InteractionHandlers
 
             if (songs.Count > 0) 
             {
-                builder.AddField("Now Playing", NameWithEmoji(songs[0]));
+                builder.AddField("Now Playing", $"{NameWithEmoji(songs[0])} ({songs[0].Length.ToString("hh':'mm':'ss")})");
             }
 
             string songString = $"**Queued Songs**{Environment.NewLine}";
             for (int i = 1; i < songs.Count && i <= listAmount; i++)
             {
-                songString += $"**{i}.** {NameWithEmoji(songs[i])}{Environment.NewLine}";
+                songString += $"**{i}.** {NameWithEmoji(songs[i])} ({songs[0].Length.ToString("hh':'mm':'ss")}){Environment.NewLine}";
+            }
+
+            var totalTime = new TimeSpan();
+            foreach (var time in songs.Skip(1).Select(x => x.Length))
+            {
+                totalTime = totalTime.Add(time);
             }
 
             if (songs.Count > listAmount + 1)
             {
-                songString += $"and {songs.Count - listAmount + 1} more";
+                songString += $"and {songs.Count - listAmount + 1} more{Environment.NewLine}";
             }
+
+            songString += $"{Environment.NewLine}Total Time: {totalTime.ToString("hh':'mm':'ss")}";
 
             builder.AddField(zeroWidthSpace, songString);
 
