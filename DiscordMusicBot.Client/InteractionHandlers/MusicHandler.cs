@@ -112,11 +112,11 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             string songString = $"**Queued Songs**{Environment.NewLine}";
             for (int i = 1; i < songs.Count && i <= listAmount; i++)
             {
-                songString += $"**{i}.** {NameWithEmoji(songs[i])} ({songs[0].Length.ToString("hh':'mm':'ss")}){Environment.NewLine}";
+                songString += $"**{i}.** {NameWithEmoji(songs[i])} ({songs[i].Length.ToString("hh':'mm':'ss")}){Environment.NewLine}";
             }
 
             var totalTime = new TimeSpan();
-            foreach (var time in songs.Skip(1).Select(x => x.Length))
+            foreach (var time in songs.Select(x => x.Length))
             {
                 totalTime = totalTime.Add(time);
             }
