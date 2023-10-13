@@ -43,6 +43,7 @@ namespace DiscordMusicBot.Runner
             services.AddSingleton<MediaDownloader>();
             services.AddSingleton<MusicModule>();
             services.AddSingleton<MovieModule>();
+            services.AddSingleton<BaseFunctions>();
 
             return services.BuildServiceProvider();
         }

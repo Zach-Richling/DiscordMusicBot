@@ -13,13 +13,15 @@ namespace DiscordMusicBot.Client.InteractionHandlers
     {
         private readonly MusicModule _musicModule;
         private readonly MediaDownloader _youtubeDl;
+        private readonly BaseFunctions _common;
         private readonly IConfiguration _config;
         private readonly string zeroWidthSpace = '\u200b'.ToString();
 
-        public MusicHandler(MusicModule musicModule, MediaDownloader youtubeDl, IConfiguration appConfig)
+        public MusicHandler(MusicModule musicModule, MediaDownloader youtubeDl, BaseFunctions common, IConfiguration appConfig)
         {
             _musicModule = musicModule;
             _youtubeDl = youtubeDl;
+            _common = common;
             _config = appConfig;
         }
 
@@ -38,7 +40,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         private async Task PlayInnerAsync(string url, bool top)
         {
             await DeferAsync();
-            var builder = InitializeEmbedBuilder();
+            var builder = _common.InitializeEmbedBuilder();
 
             try
             {
@@ -47,7 +49,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
 
                 if (songs.Count == 1)
                 {
-                    builder.WithDescription($"{NameWithEmoji(songs[0])} added.");
+                    builder.WithDescription($"{_common.NameWithEmoji(songs[0])} added.");
                 }
                 else
                 {
@@ -67,7 +69,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         public async Task Skip()
         {
             await DeferAsync();
-            var builder = InitializeEmbedBuilder();
+            var builder = _common.InitializeEmbedBuilder();
             builder.WithDescription("Song Skipped");
             await _musicModule.Skip(Context);
 
@@ -78,7 +80,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         public async Task SkipManyAsync(int amount)
         {
             await DeferAsync();
-            var builder = InitializeEmbedBuilder();
+            var builder = _common.InitializeEmbedBuilder();
 
             if (amount <= 0)
             {
@@ -102,17 +104,29 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             var songs = await _musicModule.Queue(Context);
             var listAmount = 10;
 
-            var builder = InitializeEmbedBuilder();
+            var builder = _common.InitializeEmbedBuilder();
+
+            if (songs.Count == 0)
+            {
+                builder.WithDescription("No songs queued.");
+                await FollowupAsync(embed: builder.Build());
+                return;
+            }
 
             if (songs.Count > 0) 
             {
-                builder.AddField("Now Playing", $"{NameWithEmoji(songs[0])} ({songs[0].Length.ToString("hh':'mm':'ss")})");
+                builder.AddField("Now Playing", $"{_common.NameWithEmoji(songs[0])} ({songs[0].Length.ToString("hh':'mm':'ss")})");
             }
 
-            string songString = $"**Queued Songs**{Environment.NewLine}";
-            for (int i = 1; i < songs.Count && i <= listAmount; i++)
+            var songString = "";
+
+            if (songs.Count > 1) 
             {
-                songString += $"**{i}.** {NameWithEmoji(songs[i])} ({songs[i].Length.ToString("hh':'mm':'ss")}){Environment.NewLine}";
+                songString = $"**Queued Songs**{Environment.NewLine}";
+                for (int i = 1; i < songs.Count && i <= listAmount; i++)
+                {
+                    songString += $"**{i}.** {_common.NameWithEmoji(songs[i])} ({songs[i].Length.ToString("hh':'mm':'ss")}){Environment.NewLine}";
+                }
             }
 
             var totalTime = new TimeSpan();
@@ -141,8 +155,16 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             
             await _musicModule.Clear(Context);
 
-            var builder = InitializeEmbedBuilder();
-            builder.WithDescription($"Cleared {songAmount - 1} songs");
+            var builder = _common.InitializeEmbedBuilder();
+
+            if (songAmount != 0) 
+            {
+                builder.WithDescription($"Cleared {songAmount - 1} songs");
+            } 
+            else
+            {
+                builder.WithDescription("No songs to clear");
+            }
 
             await FollowupAsync(embed: builder.Build());
 
@@ -155,27 +177,10 @@ namespace DiscordMusicBot.Client.InteractionHandlers
 
             await _musicModule.Shuffle(Context);
 
-            var builder = InitializeEmbedBuilder();
+            var builder = _common.InitializeEmbedBuilder();
             builder.WithDescription($"Shuffled Queue");
 
             await FollowupAsync(embed: builder.Build());
-        }
-
-        private EmbedBuilder InitializeEmbedBuilder()
-        {
-            return new EmbedBuilder().WithColor(Color.Orange);
-        }
-
-        private string NameWithEmoji(Song song)
-        {
-            string emoji = song.Source switch
-            {
-                SongSource.Youtube => _config["YoutubeEmoji"] ?? "",
-                SongSource.SoundCloud => _config["SoundCloudEmoji"] ?? "",
-                SongSource.Spotify => _config["SpotifyEmoji"] ?? "",
-                _ => ""
-            };
-            return $"{emoji} {song.Name}";
         }
     }
 }

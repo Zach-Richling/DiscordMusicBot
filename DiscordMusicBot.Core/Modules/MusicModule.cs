@@ -18,14 +18,16 @@ namespace DiscordMusicBot.Core.Modules
     {
         private ConcurrentDictionary<ulong, GuildMusicHandler> _guildHandlers = new();
         private readonly MediaDownloader _mediaDl;
-        public MusicModule(MediaDownloader mediaDl)
+        private readonly BaseFunctions _common;
+        public MusicModule(MediaDownloader mediaDl, BaseFunctions common)
         {
             _mediaDl = mediaDl;
+            _common = common;
         }
 
         private GuildMusicHandler GetOrAddGuild(IInteractionContext context) 
         {
-            return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMusicHandler(context, _mediaDl, context.Guild.Id));
+            return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMusicHandler(context, _mediaDl, _common, context.Guild.Id));
         }
 
         public async Task Play(IInteractionContext context, List<Song> songs, bool top) => await GetOrAddGuild(context).Play(songs, top);
@@ -47,12 +49,14 @@ namespace DiscordMusicBot.Core.Modules
 
             private IInteractionContext _context;
             private readonly MediaDownloader _mediaDl;
+            private readonly BaseFunctions _common;
 
             private object _lock = new();
-            public GuildMusicHandler(IInteractionContext context, MediaDownloader mediaDl, ulong guildId)
+            public GuildMusicHandler(IInteractionContext context, MediaDownloader mediaDl, BaseFunctions common, ulong guildId)
             {
                 _context = context;
                 _mediaDl = mediaDl;
+                _common = common;
                 _guildId = guildId;
                 _queue = new();
                 _tokenSource = new();
@@ -244,9 +248,8 @@ namespace DiscordMusicBot.Core.Modules
 
             private async Task<IUserMessage> SendNowPlayingMessage(Song song)
             {
-                var builder = new EmbedBuilder();
-                builder.WithDescription($"**Now Playing:** {song.Name}");
-                builder.WithColor(Color.Orange);
+                var builder = _common.InitializeEmbedBuilder();
+                builder.WithDescription($"**Now Playing:** {_common.NameWithEmoji(song)}");
                 return await _context.Channel.SendMessageAsync(embed: builder.Build());
             }
 
