@@ -137,7 +137,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
 
             if (songs.Count > listAmount + 1)
             {
-                songString += $"and {songs.Count - listAmount + 1} more{Environment.NewLine}";
+                songString += $"and {songs.Count - listAmount - 1} more{Environment.NewLine}";
             }
 
             songString += $"{Environment.NewLine}Total Time: {totalTime.ToString("hh':'mm':'ss")}";
