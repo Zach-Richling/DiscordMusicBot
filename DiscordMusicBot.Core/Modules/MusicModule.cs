@@ -8,6 +8,7 @@ using DiscordMusicBot.Core.Models;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
 using YoutubeExplode.Videos.Streams;
@@ -36,6 +37,19 @@ namespace DiscordMusicBot.Core.Modules
         public async Task<List<Song>> Queue(IInteractionContext context) => await GetOrAddGuild(context).GetQueue();
         public async Task Clear(IInteractionContext context) => await GetOrAddGuild(context).Clear();
         public async Task Shuffle(IInteractionContext context) => await GetOrAddGuild(context).Shuffle();
+
+        public async Task Reset(IInteractionContext context)
+        {
+            _guildHandlers.Remove(context.Guild.Id, out GuildMusicHandler? handler);
+
+            if (handler != null)
+            {
+                await handler.Clear();
+                await handler.Skip();
+            }
+
+            await Task.CompletedTask;
+        }
 
         private class GuildMusicHandler
         {

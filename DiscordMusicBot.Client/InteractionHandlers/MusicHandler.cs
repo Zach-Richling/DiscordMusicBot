@@ -182,5 +182,18 @@ namespace DiscordMusicBot.Client.InteractionHandlers
 
             await FollowupAsync(embed: builder.Build());
         }
+
+        [SlashCommand("reset", "Destroys all resources used by the bot on the server.", runMode: RunMode.Async)]
+        public async Task ResetAsync()
+        {
+            await DeferAsync();
+
+            await _musicModule.Reset(Context);
+
+            var builder = _common.InitializeEmbedBuilder();
+            builder.WithDescription($"Destroyed all resources used by bot.");
+
+            await FollowupAsync(embed: builder.Build());
+        }
     }
 }
