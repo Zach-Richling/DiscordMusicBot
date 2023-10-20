@@ -12,45 +12,23 @@ namespace DiscordMusicBot.Core.Modules
 {
     public class MovieModule
     {
-        private ConcurrentDictionary<ulong, GuildMovieHandler> _guildHandlers = new();
-
-        private GuildMovieHandler GetOrAddGuild(IInteractionContext context)
-        {
-            return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMovieHandler(context));
-        }
-
         public async Task<string> SelectMovie(IInteractionContext context)
         {
-            return await GetOrAddGuild(context).SelectMovie();
-        }
+            var channels = await context.Guild.GetChannelsAsync();
+            var channelId = channels.Where(x => x.Name == "movie-time").Select(x => x.Id).FirstOrDefault();
 
-        private class GuildMovieHandler
-        {
-            private IInteractionContext _context;
-
-            public GuildMovieHandler(IInteractionContext context)
+            if (channelId == 0)
             {
-                _context = context;
+                return "";
             }
 
-            public async Task<string> SelectMovie()
-            {
-                var channels = await _context.Guild.GetChannelsAsync();
-                var channelId = channels.Where(x => x.Name == "movie-time").Select(x => x.Id).FirstOrDefault();
+            var channel = (IMessageChannel)(await context.Guild.GetChannelAsync(channelId));
+            var messages = await channel.GetMessagesAsync(500).FlattenAsync();
+            var filteredMessages = messages.Where(x => !x.Reactions.Select(y => y.Key.Name).Contains("white_check_mark")).ToList();
 
-                if (channelId == 0)
-                {
-                    return "";
-                }
-
-                var channel = (IMessageChannel)(await _context.Guild.GetChannelAsync(channelId));
-                var messages = await channel.GetMessagesAsync(500).FlattenAsync();
-                var filteredMessages = messages.Where(x => !x.Reactions.Select(y => y.Key.Name).Contains("white_check_mark")).ToList();
-
-                var random = new Random();
-                var selectedMessage = filteredMessages[random.Next(filteredMessages.Count)];
-                return selectedMessage.Content;
-            }
+            var random = new Random();
+            var selectedMessage = filteredMessages[random.Next(filteredMessages.Count)];
+            return selectedMessage.Content;
         }
     }
 }
