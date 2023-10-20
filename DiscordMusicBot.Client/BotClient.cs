@@ -48,6 +48,7 @@ namespace DiscordMusicBot.Client
                 await _interactionService.ExecuteCommandAsync(ctx, _serviceProvider);
             };
 
+            await _discordClient.SetCustomStatusAsync($"Serving {_discordClient.Guilds.Count} servers");
         }
 
         private Task LogAsync(LogMessage message)
