@@ -17,3 +17,8 @@ appsettings.json must be created in DiscordMusicBot.Runner root folder including
 ### FFMPEG
 - This bot requires FFMPEG to be installed and included in the PATH of the computer running the bot. [Install from here](https://ffmpeg.org/download.html)
 - FFMPEG requires two additional DLLs to be present. libsodium.dll and opus.dll. [Binaries can be downloaded here](https://github.com/discord-net/Discord.Net/tree/dev/voice-natives)
+
+## Further Development
+- Add playlist starting at certain index
+- Pause, Resume, and Stop (Saving the current queue)
+- Clean up resources if guild is inactive after certain period of time
