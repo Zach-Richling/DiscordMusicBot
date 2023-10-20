@@ -17,7 +17,7 @@ namespace DiscordMusicBot.Core.Modules
 {
     public class MusicModule
     {
-        private ConcurrentDictionary<ulong, GuildMusicHandler> _guildHandlers = new();
+        private ConcurrentDictionary<ulong, GuildMusicModule> _guildHandlers = new();
         private readonly MediaDownloader _mediaDl;
         private readonly BaseFunctions _common;
         public MusicModule(MediaDownloader mediaDl, BaseFunctions common)
@@ -26,9 +26,9 @@ namespace DiscordMusicBot.Core.Modules
             _common = common;
         }
 
-        private GuildMusicHandler GetOrAddGuild(IInteractionContext context) 
+        private GuildMusicModule GetOrAddGuild(IInteractionContext context) 
         {
-            return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMusicHandler(context, _mediaDl, _common, context.Guild.Id));
+            return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMusicModule(context, _mediaDl, _common, context.Guild.Id));
         }
 
         public async Task Play(IInteractionContext context, List<Song> songs, bool top) => await GetOrAddGuild(context).Play(songs, top);
@@ -40,7 +40,7 @@ namespace DiscordMusicBot.Core.Modules
 
         public async Task Reset(IInteractionContext context)
         {
-            _guildHandlers.Remove(context.Guild.Id, out GuildMusicHandler? handler);
+            _guildHandlers.Remove(context.Guild.Id, out GuildMusicModule? handler);
 
             if (handler != null)
             {
@@ -51,7 +51,7 @@ namespace DiscordMusicBot.Core.Modules
             await Task.CompletedTask;
         }
 
-        private class GuildMusicHandler
+        private class GuildMusicModule
         {
             private ulong _guildId;
             private List<Song> _queue;
@@ -66,7 +66,7 @@ namespace DiscordMusicBot.Core.Modules
             private readonly BaseFunctions _common;
 
             private object _lock = new();
-            public GuildMusicHandler(IInteractionContext context, MediaDownloader mediaDl, BaseFunctions common, ulong guildId)
+            public GuildMusicModule(IInteractionContext context, MediaDownloader mediaDl, BaseFunctions common, ulong guildId)
             {
                 _context = context;
                 _mediaDl = mediaDl;
