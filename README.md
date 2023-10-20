@@ -20,5 +20,5 @@ appsettings.json must be created in DiscordMusicBot.Runner root folder including
 
 ## Further Development
 - Add playlist starting at certain index
-- Pause, Resume, and Stop (Saving the current queue)
+- Pause, Resume, Repeat, and Stop (Saving the current queue)
 - Clean up resources if guild is inactive after certain period of time
