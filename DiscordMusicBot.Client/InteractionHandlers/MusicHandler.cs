@@ -210,7 +210,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         }
 
         [SlashCommand("repeat", "Toggles repeating the current song.", runMode: RunMode.Async)]
-        public async Task Repeat()
+        public async Task RepeatAsync()
         {
             await DeferAsync();
 
