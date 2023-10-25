@@ -183,6 +183,45 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             await FollowupAsync(embed: builder.Build());
         }
 
+        [SlashCommand("pause", "Pause the current song.", runMode: RunMode.Async)]
+        public async Task PauseAsync()
+        {
+            await DeferAsync();
+
+            await _musicModule.Pause(Context);
+
+            var builder = _common.InitializeEmbedBuilder();
+            builder.WithDescription($"Song Paused");
+
+            await FollowupAsync(embed: builder.Build());
+        }
+
+        [SlashCommand("resume", "Resumes the current song.", runMode: RunMode.Async)]
+        public async Task ResumeAsync()
+        {
+            await DeferAsync();
+
+            await _musicModule.Resume(Context);
+
+            var builder = _common.InitializeEmbedBuilder();
+            builder.WithDescription($"Song Resumed");
+
+            await FollowupAsync(embed: builder.Build());
+        }
+
+        [SlashCommand("repeat", "Toggles repeating the current song.", runMode: RunMode.Async)]
+        public async Task Repeat()
+        {
+            await DeferAsync();
+
+            var repeated = await _musicModule.Repeat(Context);
+
+            var builder = _common.InitializeEmbedBuilder();
+            builder.WithDescription($"Repeat toggled " + (repeated ? "on" : "off"));
+
+            await FollowupAsync(embed: builder.Build());
+        }
+
         [SlashCommand("reset", "Destroys all resources used by the bot on the server.", runMode: RunMode.Async)]
         public async Task ResetAsync()
         {
