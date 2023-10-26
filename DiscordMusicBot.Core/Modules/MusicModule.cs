@@ -12,6 +12,7 @@ using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks.Dataflow;
 using YoutubeExplode.Videos.Streams;
 
 namespace DiscordMusicBot.Core.Modules
@@ -40,6 +41,10 @@ namespace DiscordMusicBot.Core.Modules
         public async Task<bool> Repeat(IInteractionContext context)
         {
             return await GetOrAddGuild(context).Repeat();
+        }
+        public async Task<bool> Join(IInteractionContext context)
+        {
+            return await GetOrAddGuild(context).Join(context);
         }
         public async Task<List<Song>> Queue(IInteractionContext context) => await GetOrAddGuild(context).GetQueue();
         public async Task Clear(IInteractionContext context) => await GetOrAddGuild(context).Clear();
@@ -103,10 +108,30 @@ namespace DiscordMusicBot.Core.Modules
                 await StartQueueThread();
             }
 
+            public async Task<bool> Join(IInteractionContext context)
+            {
+                if (_queue.Any()) 
+                {
+                    _context = context;
+                    _queue.Insert(1, _queue[0]);
+
+                    if (_audioClient != null) 
+                    {
+                        await _audioClient.StopAsync();
+                        _audioClient.Dispose();
+                        _audioClient = null;
+                    }
+
+                    await Skip();
+                    return true;
+                }
+                return false;
+            }
+
             public async Task Skip()
             {
-                _tokenSource.Cancel();
                 _songAction = SongAction.Skip;
+                _tokenSource.Cancel();
                 await Task.CompletedTask;
             }
 

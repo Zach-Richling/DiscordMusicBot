@@ -222,6 +222,27 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             await FollowupAsync(embed: builder.Build());
         }
 
+        [SlashCommand("join", "Makes the bot join to the users channel", runMode: RunMode.Async)]
+        public async Task JoinAsync()
+        {
+            await DeferAsync();
+
+            var joined = await _musicModule.Join(Context);
+
+            var builder = _common.InitializeEmbedBuilder();
+            
+            if (joined)
+            {
+                builder.WithDescription($"Changed channels");
+            }
+            else
+            {
+                builder.WithDescription($"Could not change channels");
+            }
+
+            await FollowupAsync(embed: builder.Build());
+        }
+
         [SlashCommand("reset", "Destroys all resources used by the bot on the server.", runMode: RunMode.Async)]
         public async Task ResetAsync()
         {
