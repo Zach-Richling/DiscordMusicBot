@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
+using DiscordMusicBot.Core.Modules;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
@@ -15,13 +16,15 @@ namespace DiscordMusicBot.Client
         private readonly IServiceProvider _serviceProvider;
         private readonly InteractionServiceConfig _interactionConfig;
         private InteractionService _interactionService;
-        public BotClient(IConfiguration appConfig, IServiceProvider serviceProvider, DiscordSocketConfig discordConfig, InteractionServiceConfig interactionConfig)
+        private MusicModule _musicModule;
+        public BotClient(IConfiguration appConfig, IServiceProvider serviceProvider, DiscordSocketConfig discordConfig, InteractionServiceConfig interactionConfig, MusicModule musicModule)
         {
             _config = appConfig;
             _discordClient = new DiscordSocketClient(discordConfig);
             _serviceProvider = serviceProvider;
             _interactionConfig = interactionConfig;
             _interactionService = new InteractionService(_discordClient, _interactionConfig);
+            _musicModule = musicModule;
             LoginAndStart();
         }
 
@@ -47,6 +50,8 @@ namespace DiscordMusicBot.Client
                 var ctx = new SocketInteractionContext(_discordClient, interaction);
                 await _interactionService.ExecuteCommandAsync(ctx, _serviceProvider);
             };
+
+            _discordClient.UserVoiceStateUpdated += _musicModule.UserVoiceEvent;
 
             await _discordClient.SetCustomStatusAsync($"Serving {_discordClient.Guilds.Count} servers");
         }

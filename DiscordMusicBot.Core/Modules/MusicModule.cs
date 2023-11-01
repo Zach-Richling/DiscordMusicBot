@@ -3,6 +3,7 @@ using Discord;
 using Discord.Audio;
 using Discord.Audio.Streams;
 using Discord.Commands;
+using Discord.WebSocket;
 using DiscordMusicBot.Core.Data;
 using DiscordMusicBot.Core.Enums;
 using DiscordMusicBot.Core.Models;
@@ -31,6 +32,33 @@ namespace DiscordMusicBot.Core.Modules
         private GuildMusicModule GetOrAddGuild(IInteractionContext context) 
         {
             return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMusicModule(context, _mediaDl, _common, context.Guild.Id));
+        }
+
+        public async Task UserVoiceEvent(SocketUser socketUser, SocketVoiceState stateBefore, SocketVoiceState stateAfter)
+        {
+            await Task.Run(async () => {
+                var voiceChannel = stateBefore.VoiceChannel;
+                var guildId = stateBefore.VoiceChannel?.Guild.Id;
+
+                if (guildId != null && _guildHandlers.TryGetValue((ulong)guildId, out var guildMusicModule))
+                {
+                    if (voiceChannel != null) 
+                    {
+                        var currentVC = guildMusicModule.GetCurrentVoiceChannel();
+                        if (currentVC != stateAfter.VoiceChannel && currentVC != null)
+                        {
+                            var users = voiceChannel.ConnectedUsers;
+
+                            if (!users.Where(x => !x.IsBot).Any())
+                            {
+                                await guildMusicModule.Clear();
+                                await guildMusicModule.Skip();
+                                _guildHandlers.Remove((ulong)guildId, out var _);
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         public async Task Play(IInteractionContext context, List<Song> songs, bool top) => await GetOrAddGuild(context).Play(songs, top);
@@ -74,6 +102,8 @@ namespace DiscordMusicBot.Core.Modules
 
 
             private IInteractionContext _context;
+            private IVoiceChannel? _requestedVC;
+            private IMessageChannel _messageChannel;
             private readonly MediaDownloader _mediaDl;
             private readonly BaseFunctions _common;
 
@@ -84,6 +114,8 @@ namespace DiscordMusicBot.Core.Modules
             public GuildMusicModule(IInteractionContext context, MediaDownloader mediaDl, BaseFunctions common, ulong guildId)
             {
                 _context = context;
+                _requestedVC = ((IGuildUser)context.User).VoiceChannel;
+                _messageChannel = context.Channel;
                 _mediaDl = mediaDl;
                 _common = common;
                 _guildId = guildId;
@@ -110,12 +142,12 @@ namespace DiscordMusicBot.Core.Modules
 
             public async Task<bool> Join(IInteractionContext context)
             {
-                if (_queue.Any()) 
+                if (_queue.Any())
                 {
-                    _context = context;
+                    _requestedVC = ((IGuildUser)context.User).VoiceChannel;
                     _queue.Insert(1, _queue[0]);
 
-                    if (_audioClient != null) 
+                    if (_audioClient != null)
                     {
                         await _audioClient.StopAsync();
                         _audioClient.Dispose();
@@ -125,6 +157,7 @@ namespace DiscordMusicBot.Core.Modules
                     await Skip();
                     return true;
                 }
+
                 return false;
             }
 
@@ -220,6 +253,16 @@ namespace DiscordMusicBot.Core.Modules
                 return await Task.FromResult(_queue);
             }
 
+            public IVoiceChannel? GetCurrentVoiceChannel()
+            {
+                if (_audioClient == null)
+                {
+                    return null;
+                }
+
+                return _requestedVC;
+            }
+
             private async Task StartQueueThread()
             {
                 if (_queueTask == null || _queueTask.IsCompleted)
@@ -276,18 +319,17 @@ namespace DiscordMusicBot.Core.Modules
             private async Task StartAudioAsync()
             {
                 _songAction = SongAction.None;
-                var userChannel = (_context.User as IGuildUser)?.VoiceChannel;
 
                 Song currentSong = _queue[0];
 
-                if (userChannel == null)
+                if (_requestedVC == null)
                 {
                     return;
                 }
 
                 if (_audioClient == null || (_audioClient != null && (_audioClient.ConnectionState == ConnectionState.Disconnected || _audioClient.ConnectionState == ConnectionState.Disconnecting)))
                 {
-                    _audioClient = await userChannel.ConnectAsync();
+                    _audioClient = await _requestedVC.ConnectAsync();
                 }
 
                 currentSong.AudioStream = await _mediaDl.StreamAudio(currentSong, _tokenSource.Token);
@@ -350,7 +392,7 @@ namespace DiscordMusicBot.Core.Modules
             {
                 var builder = _common.InitializeEmbedBuilder();
                 builder.WithDescription($"**Now Playing:** {_common.NameWithEmoji(song)}");
-                return await _context.Channel.SendMessageAsync(embed: builder.Build());
+                return await _messageChannel.SendMessageAsync(embed: builder.Build());
             }
 
             private async Task<MemoryStream> StartFFMPEG(Stream audioStream)
