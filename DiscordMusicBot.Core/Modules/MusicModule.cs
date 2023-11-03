@@ -346,7 +346,7 @@ namespace DiscordMusicBot.Core.Modules
                 using (var ffmpegStream = await StartFFMPEG(currentSong.AudioStream))
                 using (var discordStream = _audioClient!.CreatePCMStream(AudioApplication.Mixed))
                 {
-                    while ((!_tokenSource.IsCancellationRequested && _songAction == SongAction.Repeat) || (_songAction != SongAction.Repeat && playCount == 0) || (_songAction == SongAction.Resume && playCount == 0))
+                    while ((!_tokenSource.IsCancellationRequested && _songAction == SongAction.Repeat) || (_songAction != SongAction.Repeat && playCount == 0))
                     {
                         playCount++;
 
@@ -370,12 +370,12 @@ namespace DiscordMusicBot.Core.Modules
 
                         if (_songAction == SongAction.Pause)
                         {
-                            _tokenSource = new();
                             while (_songAction != SongAction.Resume)
                             {
                                 Thread.Sleep(100);
                             }
 
+                            _tokenSource = new();
                             playCount = 0;
                         }
                     }
