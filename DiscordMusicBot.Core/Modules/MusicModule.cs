@@ -350,7 +350,7 @@ namespace DiscordMusicBot.Core.Modules
                     {
                         playCount++;
 
-                        if (_songAction == SongAction.Repeat || _songAction == SongAction.Resume)
+                        if (_songAction == SongAction.Repeat)
                         {
                             ffmpegStream.Seek(0, SeekOrigin.Begin);
                         }
@@ -359,7 +359,12 @@ namespace DiscordMusicBot.Core.Modules
                         {
                             try
                             {
-                                await ffmpegStream.CopyToAsync(discordStream, _tokenSource.Token);
+                                int currentPosition;
+                                byte[] buffer = new byte[4096];
+                                while ((currentPosition = await ffmpegStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                                {
+                                    await discordStream.WriteAsync(buffer, 0, currentPosition, _tokenSource.Token);
+                                }
                             }
                             finally
                             {
