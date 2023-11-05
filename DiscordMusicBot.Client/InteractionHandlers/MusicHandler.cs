@@ -28,16 +28,28 @@ namespace DiscordMusicBot.Client.InteractionHandlers
         [SlashCommand("play", "Play a song.", runMode: RunMode.Async)]
         public async Task PlayAsync(string url)
         {
-            await PlayInnerAsync(url, false);
+            await PlayInnerAsync(url, false, false);
         }
 
-        [SlashCommand("playtop", "Play a song at the top of the queue.", runMode: RunMode.Async)]
+        [SlashCommand("play-top", "Play a song at the top of the queue.", runMode: RunMode.Async)]
         public async Task PlayTopAsync(string url)
         {
-            await PlayInnerAsync(url, true);
+            await PlayInnerAsync(url, true, false);
         }
 
-        private async Task PlayInnerAsync(string url, bool top)
+        [SlashCommand("play-shuffle", "Shuffle a playlist before adding to the queue.", runMode: RunMode.Async)]
+        public async Task PlayShuffleAsync(string url)
+        {
+            await PlayInnerAsync(url, false, true);
+        }
+
+        [SlashCommand("play-top-shuffle", "Shuffle a playlist before adding to the top of the queue.", runMode: RunMode.Async)]
+        public async Task PlayTopShuffleAsync(string url)
+        {
+            await PlayInnerAsync(url, true, true);
+        }
+
+        private async Task PlayInnerAsync(string url, bool top, bool shuffle)
         {
             await DeferAsync();
             var builder = _common.InitializeEmbedBuilder();
@@ -45,7 +57,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             try
             {
                 var songs = await _youtubeDl.ProcessURL(url);
-                await _musicModule.Play(Context, songs, top);
+                await _musicModule.Play(Context, songs, top, shuffle);
 
                 if (songs.Count == 1)
                 {
@@ -76,7 +88,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             await FollowupAsync(embed: builder.Build());
         }
 
-        [SlashCommand("skipmany", "Skip a number of songs.", runMode: RunMode.Async)]
+        [SlashCommand("skip-many", "Skip a number of songs.", runMode: RunMode.Async)]
         public async Task SkipManyAsync(int amount)
         {
             await DeferAsync();
