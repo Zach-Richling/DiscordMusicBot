@@ -13,7 +13,6 @@ namespace DiscordMusicBot.Core.Models
         public string Name { get; set; } = "";
         public string Artist { get; set; } = "";
         public TimeSpan Length { get; set; }
-        public Stream? AudioStream { get; set; }
         public SongSource Source { get; set; }
     }
 }

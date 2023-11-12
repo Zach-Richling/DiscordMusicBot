@@ -49,6 +49,48 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             await PlayInnerAsync(url, true, true);
         }
 
+        [SlashCommand("play-previous", "Add a previously played song to the queue.", runMode: RunMode.Async)]
+        public async Task PlayPreviousAsync(int index)
+        {
+            await PlayPreviousInnerAsync(index, false);
+        }
+
+        [SlashCommand("play-top-previous", "Add a previously played song to the top of the queue.", runMode: RunMode.Async)]
+        public async Task PlayTopPreviousAsync(int index)
+        {
+            await PlayPreviousInnerAsync(index, true);
+        }
+
+        private async Task PlayPreviousInnerAsync(int index, bool top)
+        {
+            await DeferAsync();
+            var previousQueue = await _musicModule.PreviousQueue(Context);
+            var builder = _common.InitializeEmbedBuilder();
+            if (previousQueue.Count == 0)
+            {
+                builder.WithDescription($"No songs in previous queue");
+            }
+            else if (previousQueue.Count == 1 && index != 1)
+            {
+                builder.WithDescription($"Index must be 1");
+            }
+            else if (index < 1 || index > previousQueue.Count)
+            {
+                builder.WithDescription($"Index must be between 1 and {previousQueue.Count}");
+            }
+
+            if (!string.IsNullOrEmpty(builder.Description))
+            {
+                await FollowupAsync(embed: builder.Build());
+                return;
+            }
+
+            var song = previousQueue[index - 1];
+            await _musicModule.Play(Context, new List<Song> { song }, top, false);
+            builder.WithDescription($"{_common.NameWithEmoji(song)} added.");
+            await FollowupAsync(embed: builder.Build());
+        }
+
         private async Task PlayInnerAsync(string url, bool top, bool shuffle)
         {
             await DeferAsync();
@@ -125,16 +167,17 @@ namespace DiscordMusicBot.Client.InteractionHandlers
                 return;
             }
 
-            if (songs.Count > 0) 
-            {
-                builder.AddField("Now Playing", $"{_common.NameWithEmoji(songs[0])} ({songs[0].Length.ToString("hh':'mm':'ss")})");
-            }
-
             var songString = "";
 
-            if (songs.Count > 1) 
+            if (songs.Count > 0)
             {
-                songString = $"**Queued Songs**{Environment.NewLine}";
+                songString += $"**Now Playing**{Environment.NewLine}";
+                songString += $"{_common.NameWithEmoji(songs[0])} ({songs[0].Length.ToString("hh':'mm':'ss")})";
+            }
+
+            if (songs.Count > 1)
+            {
+                songString += $"{Environment.NewLine}{Environment.NewLine}**Queued Songs**{Environment.NewLine}";
                 for (int i = 1; i < songs.Count && i <= listAmount; i++)
                 {
                     songString += $"**{i}.** {_common.NameWithEmoji(songs[i])} ({songs[i].Length.ToString("hh':'mm':'ss")}){Environment.NewLine}";
@@ -151,11 +194,34 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             {
                 songString += $"and {songs.Count - listAmount - 1} more{Environment.NewLine}";
             }
-
             songString += $"{Environment.NewLine}Total Time: {totalTime.ToString("hh':'mm':'ss")}";
 
-            builder.AddField(zeroWidthSpace, songString);
+            builder.WithDescription(songString);
+            await FollowupAsync(embed: builder.Build());
+        }
 
+        [SlashCommand("previous-queue", "Display previous songs in the queue.", runMode: RunMode.Async)]
+        public async Task PreviousQueueAsync()
+        {
+            await DeferAsync();
+            var previousSongs = await _musicModule.PreviousQueue(Context);
+            var builder = _common.InitializeEmbedBuilder();
+            string songString = "";
+
+            if (previousSongs.Count == 0)
+            {
+                builder.WithDescription("No songs in previous queue.");
+                await FollowupAsync(embed: builder.Build());
+                return;
+            }
+
+            songString = $"**Previous Songs**{Environment.NewLine}";
+            for (int i = 0; i < previousSongs.Count; i++)
+            {
+                songString += $"**{i + 1}.** {_common.NameWithEmoji(previousSongs[i])}{Environment.NewLine}";
+            }
+
+            builder.WithDescription(songString);
             await FollowupAsync(embed: builder.Build());
         }
 

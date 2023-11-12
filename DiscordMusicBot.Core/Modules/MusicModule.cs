@@ -61,7 +61,7 @@ namespace DiscordMusicBot.Core.Modules
             });
         }
 
-        public async Task Play(IInteractionContext context, List<Song> songs, bool top, bool shuffle) => await GetOrAddGuild(context).Play(songs, top, shuffle);
+        public async Task Play(IInteractionContext context, List<Song> songs, bool top, bool shuffle) => await GetOrAddGuild(context).Play(context, songs, top, shuffle);
         public async Task Skip(IInteractionContext context) => await GetOrAddGuild(context).Skip();
         public async Task Skip(IInteractionContext context, int amount) => await GetOrAddGuild(context).Skip(amount);
         public async Task Pause(IInteractionContext context) => await GetOrAddGuild(context).Pause();
@@ -75,6 +75,7 @@ namespace DiscordMusicBot.Core.Modules
             return await GetOrAddGuild(context).Join(context);
         }
         public async Task<List<Song>> Queue(IInteractionContext context) => await GetOrAddGuild(context).GetQueue();
+        public async Task<List<Song>> PreviousQueue(IInteractionContext context) => await GetOrAddGuild(context).GetPreviousQueue();
         public async Task Clear(IInteractionContext context) => await GetOrAddGuild(context).Clear();
         public async Task Shuffle(IInteractionContext context) => await GetOrAddGuild(context).Shuffle();
 
@@ -95,6 +96,7 @@ namespace DiscordMusicBot.Core.Modules
         {
             private ulong _guildId;
             private List<Song> _queue;
+            private List<Song> _previous;
             private Task? _queueTask;
 
             private CancellationTokenSource _tokenSource;
@@ -119,10 +121,11 @@ namespace DiscordMusicBot.Core.Modules
                 _common = common;
                 _guildId = guildId;
                 _queue = new();
+                _previous = new();
                 _tokenSource = new();
             }
 
-            public async Task Play(List<Song> songs, bool top, bool shuffle)
+            public async Task Play(IInteractionContext context, List<Song> songs, bool top, bool shuffle)
             {
                 if (songs.Count > 1 && shuffle)
                 {
@@ -149,6 +152,11 @@ namespace DiscordMusicBot.Core.Modules
                     {
                         _queue.AddRange(songs);
                     }
+                }
+
+                if (_audioClient == null)
+                {
+                    _requestedVC = ((IGuildUser)context.User).VoiceChannel;
                 }
 
                 await StartQueueThread();
@@ -277,6 +285,11 @@ namespace DiscordMusicBot.Core.Modules
                 return _requestedVC;
             }
 
+            public async Task<List<Song>> GetPreviousQueue()
+            {
+                return await Task.FromResult(_previous);
+            }
+
             private async Task StartQueueThread()
             {
                 if (_queueTask == null || _queueTask.IsCompleted)
@@ -311,6 +324,17 @@ namespace DiscordMusicBot.Core.Modules
                         lock (_lock)
                         {
                             Log($"Removed {_queue[0].Name}");
+
+                            if (_previous.Count != 10)
+                            {
+                                _previous.Add(_queue[0]);
+                            }
+                            else
+                            {
+                                _previous.RemoveAt(0);
+                                _previous.Add(_queue[0]);
+                            }
+
                             _queue.RemoveAt(0);
                             _queue.TrimExcess();
                             GC.Collect();
@@ -346,17 +370,12 @@ namespace DiscordMusicBot.Core.Modules
                     _audioClient = await _requestedVC.ConnectAsync();
                 }
 
-                currentSong.AudioStream = await _mediaDl.StreamAudio(currentSong, _tokenSource.Token);
-                
-                if (currentSong.AudioStream == null)
-                {
-                    return;
-                }
+                using Stream audioStream = await _mediaDl.StreamAudio(currentSong, _tokenSource.Token);
 
                 IUserMessage nowPlayingMessage = await SendNowPlayingMessage(currentSong);
 
                 int playCount = 0;
-                using (var ffmpegStream = await StartFFMPEG(currentSong.AudioStream))
+                using (var ffmpegStream = await StartFFMPEG(audioStream))
                 using (var discordStream = _audioClient!.CreatePCMStream(AudioApplication.Mixed))
                 {
                     while ((!_tokenSource.IsCancellationRequested && _songAction == SongAction.Repeat) || (_songAction != SongAction.Repeat && playCount == 0))
