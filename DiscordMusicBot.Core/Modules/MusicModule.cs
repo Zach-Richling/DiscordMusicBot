@@ -7,11 +7,13 @@ using Discord.WebSocket;
 using DiscordMusicBot.Core.Data;
 using DiscordMusicBot.Core.Enums;
 using DiscordMusicBot.Core.Models;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks.Dataflow;
 using YoutubeExplode.Videos.Streams;
@@ -23,15 +25,35 @@ namespace DiscordMusicBot.Core.Modules
         private ConcurrentDictionary<ulong, GuildMusicModule> _guildHandlers = new();
         private readonly MediaDownloader _mediaDl;
         private readonly BaseFunctions _common;
-        public MusicModule(MediaDownloader mediaDl, BaseFunctions common)
+        public MusicModule(MediaDownloader mediaDl, BaseFunctions common, IConfiguration config)
         {
             _mediaDl = mediaDl;
             _common = common;
+
+            var audioDir = config["AudioDirectory"]?.ToString();
+            if (!string.IsNullOrEmpty(audioDir)) 
+            {
+                LoadLibrary(Path.Combine(audioDir, "opus.dll"));
+                LoadLibrary(Path.Combine(audioDir, "libsodium.dll"));
+            }
         }
+
+        [DllImport("kernel32", SetLastError = true)]
+        private static extern IntPtr LoadLibrary(string lpFileName);
 
         private GuildMusicModule GetOrAddGuild(IInteractionContext context) 
         {
             return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMusicModule(context, _mediaDl, _common, context.Guild.Id));
+        }
+
+        public async Task RemoveAllHandlers()
+        {
+            foreach (var guildHandler in _guildHandlers.Select(x => x.Value))
+            {
+                await guildHandler.Clear();
+                await guildHandler.Skip();
+            }
+            _guildHandlers.Clear();
         }
 
         public async Task UserVoiceEvent(SocketUser socketUser, SocketVoiceState stateBefore, SocketVoiceState stateAfter)
@@ -61,6 +83,7 @@ namespace DiscordMusicBot.Core.Modules
             });
         }
 
+        //Methods to route the received command to the correct guilds music handler.
         public async Task Play(IInteractionContext context, List<Song> songs, bool top, bool shuffle) => await GetOrAddGuild(context).Play(context, songs, top, shuffle);
         public async Task Skip(IInteractionContext context) => await GetOrAddGuild(context).Skip();
         public async Task Skip(IInteractionContext context, int amount) => await GetOrAddGuild(context).Skip(amount);
@@ -294,7 +317,7 @@ namespace DiscordMusicBot.Core.Modules
             {
                 if (_queueTask == null || _queueTask.IsCompleted)
                 {
-                    Log($"{_guildId}: Starting new queue task");
+                    Log("Starting new queue task");
                     _queueTask = ProcessQueue();
                 }
 
@@ -436,7 +459,7 @@ namespace DiscordMusicBot.Core.Modules
             {
                 MemoryStream ms = new MemoryStream();
 
-                await Cli.Wrap("ffmpeg")
+                await Cli.Wrap("C:\\Program Files\\Audio Libraries\\ffmpeg.exe")
                     .WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1")
                     .WithStandardInputPipe(PipeSource.FromStream(audioStream))
                     .WithStandardOutputPipe(PipeTarget.ToStream(ms))
@@ -446,9 +469,9 @@ namespace DiscordMusicBot.Core.Modules
                 return ms;
             }
 
-            private void Log(string message)
+            private void Log(string message, string loglevel = "Info")
             {
-                Console.WriteLine($"{_guildId}: {message}");
+                Console.WriteLine($"[MusicModule/{loglevel}] {DateTime.Now.ToString("HH:mm:ss")} {_guildId}: {message}");
             }
         }
         
