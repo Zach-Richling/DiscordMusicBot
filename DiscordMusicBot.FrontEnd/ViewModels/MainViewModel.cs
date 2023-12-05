@@ -1,6 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Discord;
 using DiscordMusicBot.Client;
+using DiscordMusicBot.Core.Models;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace DiscordMusicBot.FrontEnd.ViewModels;
@@ -18,6 +21,7 @@ public partial class MainViewModel : ViewModelBase
     }
     public string LoginStatus => _botClient.LoginStatus;
     public string ConnectionStatus => _botClient.ConnectionStatus;
+    public IEnumerable<Tuple<IGuild, List<Song>>> AllQueues => _botClient.AllQueues;
     public string Greeting => "Welcome to the Discord Music Bot!";
 
     [ObservableProperty]
@@ -40,6 +44,12 @@ public partial class MainViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(ConnectionStatus));
         ConnectionFailReason = e.Message;
+        await Task.CompletedTask;
+    }
+
+    public async Task QueueUpdated()
+    {
+        OnPropertyChanged(nameof(AllQueues));
         await Task.CompletedTask;
     }
 }

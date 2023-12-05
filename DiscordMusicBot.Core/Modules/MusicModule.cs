@@ -22,9 +22,13 @@ namespace DiscordMusicBot.Core.Modules
 {
     public class MusicModule
     {
-        private ConcurrentDictionary<ulong, GuildMusicModule> _guildHandlers = new();
+        private ConcurrentDictionary<IGuild, GuildMusicModule> _guildHandlers = new();
         private readonly MediaDownloader _mediaDl;
         private readonly BaseFunctions _common;
+
+        [DllImport("kernel32", SetLastError = true)]
+        private static extern IntPtr LoadLibrary(string lpFileName);
+
         public MusicModule(MediaDownloader mediaDl, BaseFunctions common, IConfiguration config)
         {
             _mediaDl = mediaDl;
@@ -38,49 +42,9 @@ namespace DiscordMusicBot.Core.Modules
             }
         }
 
-        [DllImport("kernel32", SetLastError = true)]
-        private static extern IntPtr LoadLibrary(string lpFileName);
-
         private GuildMusicModule GetOrAddGuild(IInteractionContext context) 
         {
-            return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMusicModule(context, _mediaDl, _common, context.Guild.Id));
-        }
-
-        public async Task RemoveAllHandlers()
-        {
-            foreach (var guildHandler in _guildHandlers.Select(x => x.Value))
-            {
-                await guildHandler.Clear();
-                await guildHandler.Skip();
-            }
-            _guildHandlers.Clear();
-        }
-
-        public async Task UserVoiceEvent(SocketUser socketUser, SocketVoiceState stateBefore, SocketVoiceState stateAfter)
-        {
-            await Task.Run(async () => {
-                var voiceChannel = stateBefore.VoiceChannel;
-                var guildId = stateBefore.VoiceChannel?.Guild.Id;
-
-                if (guildId != null && _guildHandlers.TryGetValue((ulong)guildId, out var guildMusicModule))
-                {
-                    if (voiceChannel != null) 
-                    {
-                        var currentVC = guildMusicModule.GetCurrentVoiceChannel();
-                        if (currentVC != stateAfter.VoiceChannel && currentVC != null)
-                        {
-                            var users = voiceChannel.ConnectedUsers;
-
-                            if (!users.Where(x => !x.IsBot).Any())
-                            {
-                                await guildMusicModule.Clear();
-                                await guildMusicModule.Skip();
-                                _guildHandlers.Remove((ulong)guildId, out var _);
-                            }
-                        }
-                    }
-                }
-            });
+            return _guildHandlers.GetOrAdd(context.Guild, new GuildMusicModule(context, _mediaDl, _common));
         }
 
         //Methods to route the received command to the correct guilds music handler.
@@ -104,7 +68,7 @@ namespace DiscordMusicBot.Core.Modules
 
         public async Task Reset(IInteractionContext context)
         {
-            _guildHandlers.Remove(context.Guild.Id, out GuildMusicModule? handler);
+            _guildHandlers.Remove(context.Guild, out GuildMusicModule? handler);
 
             if (handler != null)
             {
@@ -115,9 +79,48 @@ namespace DiscordMusicBot.Core.Modules
             await Task.CompletedTask;
         }
 
+        public async Task RemoveAllHandlers()
+        {
+            foreach (var guildHandler in _guildHandlers.Select(x => x.Value))
+            {
+                await guildHandler.Clear();
+                await guildHandler.Skip();
+            }
+            _guildHandlers.Clear();
+        }
+        
+        public async Task UserVoiceEvent(SocketUser socketUser, SocketVoiceState stateBefore, SocketVoiceState stateAfter)
+        {
+            await Task.Run(async () => {
+                var voiceChannel = stateBefore.VoiceChannel;
+                var guild = stateBefore.VoiceChannel?.Guild;
+
+                if (guild != null && _guildHandlers.TryGetValue(guild, out var guildMusicModule))
+                {
+                    if (voiceChannel != null)
+                    {
+                        var currentVC = guildMusicModule.GetCurrentVoiceChannel();
+                        if (currentVC != stateAfter.VoiceChannel && currentVC != null)
+                        {
+                            var users = voiceChannel.ConnectedUsers;
+
+                            if (!users.Where(x => !x.IsBot).Any())
+                            {
+                                await guildMusicModule.Clear();
+                                await guildMusicModule.Skip();
+                                _guildHandlers.Remove(guild, out var _);
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        public IEnumerable<Tuple<IGuild, List<Song>>> AllQueues => _guildHandlers.Select(x => Tuple.Create(x.Key, x.Value.Queue));
+
         private class GuildMusicModule
         {
-            private ulong _guildId;
+            private IGuild _guild;
             private List<Song> _queue;
             private List<Song> _previous;
             private Task? _queueTask;
@@ -135,14 +138,16 @@ namespace DiscordMusicBot.Core.Modules
             private object _lock = new();
             private SongAction _songAction = SongAction.None;
 
-            public GuildMusicModule(IInteractionContext context, MediaDownloader mediaDl, BaseFunctions common, ulong guildId)
+            public List<Song> Queue { get { return _queue; } }
+
+            public GuildMusicModule(IInteractionContext context, MediaDownloader mediaDl, BaseFunctions common)
             {
                 _context = context;
                 _requestedVC = ((IGuildUser)context.User).VoiceChannel;
                 _messageChannel = context.Channel;
                 _mediaDl = mediaDl;
                 _common = common;
-                _guildId = guildId;
+                _guild = context.Guild;
                 _queue = new();
                 _previous = new();
                 _tokenSource = new();
@@ -471,7 +476,7 @@ namespace DiscordMusicBot.Core.Modules
 
             private void Log(string message, string loglevel = "Info")
             {
-                Console.WriteLine($"[MusicModule/{loglevel}] {DateTime.Now.ToString("HH:mm:ss")} {_guildId}: {message}");
+                Console.WriteLine($"[MusicModule/{loglevel}] {DateTime.Now.ToString("HH:mm:ss")} {_guild.Id}: {message}");
             }
         }
         

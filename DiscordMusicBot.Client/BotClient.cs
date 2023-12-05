@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
+using DiscordMusicBot.Core.Models;
 using DiscordMusicBot.Core.Modules;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +22,7 @@ namespace DiscordMusicBot.Client
         //Expose some information from the discord client for the UI to display.
         public string LoginStatus { get { return _discordClient.LoginState.ToString(); } }
         public string ConnectionStatus { get { return _discordClient.ConnectionState.ToString(); } }
+        public IEnumerable<Tuple<IGuild, List<Song>>> AllQueues => _musicModule.AllQueues;
 
         public event Func<Task> LoggedIn 
         { 

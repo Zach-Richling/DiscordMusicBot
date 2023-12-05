@@ -10,10 +10,12 @@ namespace DiscordMusicBot.FrontEnd.Views;
 public partial class MainWindow : Window
 {
     private readonly Runner.Program _botRunner;
+    private MainViewModel ViewModel;
     public MainWindow(MainViewModel viewModel, Runner.Program botRunner)
     {
         InitializeComponent();
         DataContext = viewModel;
+        ViewModel = viewModel;
         _botRunner = botRunner;
     }
 
@@ -32,5 +34,10 @@ public partial class MainWindow : Window
     public async void OnBotStopClick(object sender, RoutedEventArgs args)
     {
         await _botRunner.StopAsync();
+    }
+
+    public async void Refresh(object sender, RoutedEventArgs args)
+    {
+        await ViewModel.QueueUpdated();
     }
 }

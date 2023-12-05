@@ -8,34 +8,63 @@
         Title="DiscordMusicBot">
   <Grid Background="#121212">
     <Grid.RowDefinitions>
-      <RowDefinition Height="1*"/>
-      <RowDefinition Height="3*"/>
+      <RowDefinition Height="5*"/>
+      <RowDefinition Height="15*"/>
+      <RowDefinition Height="80*"/>
     </Grid.RowDefinitions>
-
-    <Border Grid.Row="0" BorderBrush="White" BorderThickness="1" CornerRadius="5">
-      <StackPanel Orientation="Vertical" Grid.Row="1">
-        <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        <StackPanel Orientation="Horizontal">
-          <TextBlock>Login Status: </TextBlock>
+    <TextBlock Grid.Row="0" Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <Border Grid.Row="1" BorderBrush="White" BorderThickness="1" CornerRadius="5" Margin="5, 0, 5, 0">
+      <DockPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" DockPanel.Dock="Top" Margin="0, 5, 0, 0">
+          <TextBlock Text="Login Status: "/>
           <TextBlock Text="{Binding LoginStatus}"/>
         </StackPanel>
-        <StackPanel Orientation="Horizontal">
-          <TextBlock>Connection Status: </TextBlock>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" DockPanel.Dock="Top" Margin="0, 5, 0, 0">
+          <TextBlock Text="Connection Status: "/>
           <TextBlock Text="{Binding ConnectionStatus}"/>
         </StackPanel>
-        <Button Click="OnBotStartClick" Classes="Outline">Start</Button>
-        <Button Click="OnBotStopClick">Stop</Button>
-      </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" DockPanel.Dock="Bottom">
+          <Button Click="OnBotStartClick" Margin="0, 0, 5, 0">Start</Button>
+          <Button Click="OnBotStopClick" Margin="5, 0, 5, 0">Stop</Button>
+          <Button Click="Refresh" Margin="5, 0, 0, 0">Refresh</Button>
+        </StackPanel>
+      </DockPanel>
     </Border>
-
-    <ScrollViewer Grid.Row="1" x:Name="ConsoleScroller">
-      <StackPanel Grid.Row="1">
-          <TextBox x:Name="ConsoleOutput" 
-                   TextWrapping="WrapWithOverflow" 
-                   IsReadOnly="True" 
-                   ScrollViewer.VerticalScrollBarVisibility="Auto">
-          </TextBox>
-      </StackPanel>
-    </ScrollViewer>
+    <TabControl Grid.Row="2">
+      <TabItem Header="Console" FontSize="18">
+        <ScrollViewer x:Name="ConsoleScroller" Margin="5, 10, 5, 10">
+          <DockPanel>
+              <TextBox x:Name="ConsoleOutput" 
+                       TextWrapping="WrapWithOverflow" 
+                       IsReadOnly="True" 
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       VerticalContentAlignment="Stretch"
+                       VerticalAlignment="Stretch">
+              </TextBox>
+          </DockPanel>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="Guilds" FontSize="18">
+        <ItemsControl ItemsSource="{Binding AllQueues}" Margin="5, 10, 5, 10">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border BorderBrush="White" BorderThickness="1" CornerRadius="5" Margin="5, 0, 5, 0">
+                <StackPanel>
+                  <TextBlock Text="{Binding Path=Item1.Name}" FontSize="15" Margin="3, 0, 3, 0"/>
+                  <Rectangle HorizontalAlignment="Stretch" Fill="White" Height="1"/>
+                  <ItemsControl ItemsSource="{Binding Item2}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding Name}"/>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </TabItem>
+    </TabControl>
   </Grid>
 </Window>
