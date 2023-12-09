@@ -8,12 +8,10 @@
         Title="DiscordMusicBot">
   <Grid Background="#121212">
     <Grid.RowDefinitions>
-      <RowDefinition Height="5*"/>
-      <RowDefinition Height="15*"/>
+      <RowDefinition Height="20*"/>
       <RowDefinition Height="80*"/>
     </Grid.RowDefinitions>
-    <TextBlock Grid.Row="0" Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-    <Border Grid.Row="1" BorderBrush="White" BorderThickness="1" CornerRadius="5" Margin="5, 0, 5, 0">
+    <Border Grid.Row="0" BorderBrush="White" BorderThickness="1" CornerRadius="5" Margin="5, 5, 5, 0">
       <DockPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" DockPanel.Dock="Top" Margin="0, 5, 0, 0">
           <TextBlock Text="Login Status: "/>
@@ -30,7 +28,7 @@
         </StackPanel>
       </DockPanel>
     </Border>
-    <TabControl Grid.Row="2">
+    <TabControl Grid.Row="1">
       <TabItem Header="Console" FontSize="18">
         <ScrollViewer x:Name="ConsoleScroller" Margin="5, 10, 5, 10">
           <DockPanel>
@@ -49,17 +47,29 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <Border BorderBrush="White" BorderThickness="1" CornerRadius="5" Margin="5, 0, 5, 0">
-                <StackPanel>
-                  <TextBlock Text="{Binding Path=Item1.Name}" FontSize="15" Margin="3, 0, 3, 0"/>
-                  <Rectangle HorizontalAlignment="Stretch" Fill="White" Height="1"/>
-                  <ItemsControl ItemsSource="{Binding Item2}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <TextBlock Text="{Binding Name}"/>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </StackPanel>
+                <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                  <Expander.Header>
+                    <TextBlock Text="{Binding Path=Item1.Name}" FontSize="20" Margin="3, 0, 3, 0" HorizontalAlignment="Center"/>
+                  </Expander.Header>
+                  <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="Now Playing: "/>
+                      <TextBlock Text="{Binding Item2.Name}"/>
+                    </StackPanel>
+                    <DockPanel MaxHeight="250">
+                      <TextBlock Text="Next Up: " DockPanel.Dock="Top"/>
+                      <ScrollViewer DockPanel.Dock="Top">
+                        <ItemsControl ItemsSource="{Binding Item3}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                              <TextBlock Text="{Binding Name}" DockPanel.Dock="Top"/>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </ScrollViewer>
+                    </DockPanel>
+                  </StackPanel>
+                </Expander>
               </Border>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

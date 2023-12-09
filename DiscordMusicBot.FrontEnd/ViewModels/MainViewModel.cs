@@ -4,6 +4,7 @@ using DiscordMusicBot.Client;
 using DiscordMusicBot.Core.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DiscordMusicBot.FrontEnd.ViewModels;
@@ -21,7 +22,8 @@ public partial class MainViewModel : ViewModelBase
     }
     public string LoginStatus => _botClient.LoginStatus;
     public string ConnectionStatus => _botClient.ConnectionStatus;
-    public IEnumerable<Tuple<IGuild, List<Song>>> AllQueues => _botClient.AllQueues;
+
+    public IEnumerable<Tuple<IGuild, Song?, List<Song>>> AllQueues => _botClient.AllQueues.Select(x => Tuple.Create(x.Item1, x.Item2.FirstOrDefault(), x.Item2.Skip(1).ToList()));
     public string Greeting => "Welcome to the Discord Music Bot!";
 
     [ObservableProperty]
