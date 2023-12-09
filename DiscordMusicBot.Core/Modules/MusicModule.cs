@@ -44,33 +44,6 @@ namespace DiscordMusicBot.Core.Modules
             }
         }
 		
-		public async Task UserVoiceEvent(SocketUser socketUser, SocketVoiceState stateBefore, SocketVoiceState stateAfter)
-        {
-            await Task.Run(async () => {
-                var voiceChannel = stateBefore.VoiceChannel;
-                var guildId = stateBefore.VoiceChannel?.Guild.Id;
-
-                if (guildId != null && _guildHandlers.TryGetValue((ulong)guildId, out var guildMusicModule))
-                {
-                    if (voiceChannel != null) 
-                    {
-                        var currentVC = guildMusicModule.GetCurrentVoiceChannel();
-                        if (currentVC != stateAfter.VoiceChannel && currentVC != null)
-                        {
-                            var users = voiceChannel.ConnectedUsers;
-
-                            if (!users.Where(x => !x.IsBot).Any())
-                            {
-                                await guildMusicModule.Clear();
-                                await guildMusicModule.Skip();
-                                _guildHandlers.Remove((ulong)guildId, out var _);
-                            }
-                        }
-                    }
-                }
-            });
-		}
-
         private GuildMusicModule GetOrAddGuild(IInteractionContext context) 
         {
             return _guildHandlers.GetOrAdd(context.Guild, new GuildMusicModule(context, _mediaDl, _common, _config));
