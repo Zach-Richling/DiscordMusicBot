@@ -23,18 +23,26 @@ namespace DiscordMusicBot.Core.Modules
         private ConcurrentDictionary<ulong, GuildMusicModule> _guildHandlers = new();
         private readonly MediaDownloader _mediaDl;
         private readonly BaseFunctions _common;
-        public MusicModule(MediaDownloader mediaDl, BaseFunctions common)
+        private readonly IConfiguration _config;
+
+        [DllImport("kernel32", SetLastError = true)]
+        private static extern IntPtr LoadLibrary(string lpFileName);
+
+        public MusicModule(MediaDownloader mediaDl, BaseFunctions common, IConfiguration config)
         {
             _mediaDl = mediaDl;
             _common = common;
-        }
+            _config = config;
 
-        private GuildMusicModule GetOrAddGuild(IInteractionContext context) 
-        {
-            return _guildHandlers.GetOrAdd(context.Guild.Id, new GuildMusicModule(context, _mediaDl, _common, context.Guild.Id));
+            var audioDir = config["AudioDirectory"]?.ToString();
+            if (!string.IsNullOrEmpty(audioDir)) 
+            {
+                LoadLibrary(Path.Combine(audioDir, "opus.dll"));
+                LoadLibrary(Path.Combine(audioDir, "libsodium.dll"));
+            }
         }
-
-        public async Task UserVoiceEvent(SocketUser socketUser, SocketVoiceState stateBefore, SocketVoiceState stateAfter)
+		
+		public async Task UserVoiceEvent(SocketUser socketUser, SocketVoiceState stateBefore, SocketVoiceState stateAfter)
         {
             await Task.Run(async () => {
                 var voiceChannel = stateBefore.VoiceChannel;
@@ -59,6 +67,11 @@ namespace DiscordMusicBot.Core.Modules
                     }
                 }
             });
+		}
+
+        private GuildMusicModule GetOrAddGuild(IInteractionContext context) 
+        {
+            return _guildHandlers.GetOrAdd(context.Guild, new GuildMusicModule(context, _mediaDl, _common, _config));
         }
 
         public async Task Play(IInteractionContext context, List<Song> songs, bool top, bool shuffle) => await GetOrAddGuild(context).Play(context, songs, top, shuffle);
@@ -108,18 +121,22 @@ namespace DiscordMusicBot.Core.Modules
             private IMessageChannel _messageChannel;
             private readonly MediaDownloader _mediaDl;
             private readonly BaseFunctions _common;
+            private readonly IConfiguration _config;
 
             private object _lock = new();
             private SongAction _songAction = SongAction.None;
 
-            public GuildMusicModule(IInteractionContext context, MediaDownloader mediaDl, BaseFunctions common, ulong guildId)
+            public List<Song> Queue { get { return _queue; } }
+
+            public GuildMusicModule(IInteractionContext context, MediaDownloader mediaDl, BaseFunctions common, IConfiguration config)
             {
                 _context = context;
                 _requestedVC = ((IGuildUser)context.User).VoiceChannel;
                 _messageChannel = context.Channel;
                 _mediaDl = mediaDl;
                 _common = common;
-                _guildId = guildId;
+                _guild = context.Guild;
+                _config = config;
                 _queue = new();
                 _previous = new();
                 _tokenSource = new();
@@ -375,7 +392,7 @@ namespace DiscordMusicBot.Core.Modules
                 IUserMessage nowPlayingMessage = await SendNowPlayingMessage(currentSong);
 
                 int playCount = 0;
-                using (var ffmpegStream = await StartFFMPEG(audioStream))
+                using (var ffmpegStream = await StartFFMPEG(audioStream, _tokenSource.Token))
                 using (var discordStream = _audioClient!.CreatePCMStream(AudioApplication.Mixed))
                 {
                     while ((!_tokenSource.IsCancellationRequested && _songAction == SongAction.Repeat) || (_songAction != SongAction.Repeat && playCount == 0))
@@ -432,18 +449,20 @@ namespace DiscordMusicBot.Core.Modules
                 return await _messageChannel.SendMessageAsync(embed: builder.Build());
             }
 
-            private async Task<MemoryStream> StartFFMPEG(Stream audioStream)
+            private async Task<Stream> StartFFMPEG(Stream audioStream, CancellationToken cancellationToken)
             {
-                MemoryStream ms = new MemoryStream();
+                FileStream fileStream = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
 
-                await Cli.Wrap("ffmpeg")
+                var audioDir = _config["AudioDirectory"]!.ToString();
+
+                await Cli.Wrap(Path.Combine(audioDir, "ffmpeg.exe"))
                     .WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1")
                     .WithStandardInputPipe(PipeSource.FromStream(audioStream))
-                    .WithStandardOutputPipe(PipeTarget.ToStream(ms))
-                    .ExecuteAsync();
+                    .WithStandardOutputPipe(PipeTarget.ToStream(fileStream))
+                    .ExecuteAsync(cancellationToken);
 
-                ms.Seek(0, SeekOrigin.Begin);
-                return ms;
+                fileStream.Seek(0, SeekOrigin.Begin);
+                return fileStream;
             }
 
             private void Log(string message)

@@ -27,12 +27,15 @@ namespace DiscordMusicBot.Core.Extensions
             var request = new HttpRequestMessage(HttpMethod.Get, downloadURL);
             var response = await _httpClient.SendAsync(request, cancellationToken);
 
-            if (!response.IsSuccessStatusCode)
+            response.EnsureSuccessStatusCode();
+
+            var tempFileName = Path.GetTempFileName();
+            using (var tempFileStream = System.IO.File.OpenWrite(tempFileName))
             {
-                throw new HttpRequestException($"Response status code does not indicate success: {(int)response.StatusCode} ({response.StatusCode}).");
+                await response.Content.CopyToAsync(tempFileStream, cancellationToken);
             }
 
-            return await response.Content.ReadAsStreamAsync(cancellationToken);
+            return new FileStream(tempFileName, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.DeleteOnClose);
         }
     }
 }

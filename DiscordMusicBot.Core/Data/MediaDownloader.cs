@@ -69,7 +69,7 @@ namespace DiscordMusicBot.Core.Data
             }
             else if (song.Source == SongSource.Spotify)
             {
-                var youtubeVideo = await _youtubeClient.Search.GetVideosAsync($"{song.Name} {song.Artist}", cancellationToken).FirstAsync();
+                var youtubeVideo = await _youtubeClient.Search.GetVideosAsync($"{song.Name} {song.Artist}", cancellationToken).FirstAsync(cancellationToken);
                 return await GetYoutubeStream(youtubeVideo.Url, cancellationToken);
             }
             else
@@ -82,7 +82,11 @@ namespace DiscordMusicBot.Core.Data
         {
             var streamManifest = await _youtubeClient.Videos.Streams.GetManifestAsync(url);
             var audioStreamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
-            return await _youtubeClient.Videos.Streams.GetAsync(audioStreamInfo, cancellationToken);
+
+            var tempFile = Path.GetTempFileName();
+            await _youtubeClient.Videos.Streams.DownloadAsync(audioStreamInfo, tempFile, cancellationToken: cancellationToken);
+
+            return new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.DeleteOnClose);
         }
 
         private async Task<Song> CreateYoutubeSong(string url)
