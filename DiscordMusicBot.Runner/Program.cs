@@ -6,10 +6,13 @@ using DiscordMusicBot.Core.Data;
 using DiscordMusicBot.Core.Modules;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace DiscordMusicBot.Runner
 {
-    class Program
+    public class Program
     {
         private readonly IServiceProvider _serviceProvider;
         public Program()
@@ -17,7 +20,11 @@ namespace DiscordMusicBot.Runner
             _serviceProvider = CreateProvider();
         }
 
-        static void Main(string[] args) => new Program().RunAsync(args).GetAwaiter().GetResult();
+        static void Main(string[] args)
+        {
+            new Program().RunAsync().GetAwaiter().GetResult();
+            Task.Delay(-1).GetAwaiter().GetResult();
+        }
 
         private static IServiceProvider CreateProvider()
         {
@@ -48,10 +55,21 @@ namespace DiscordMusicBot.Runner
             return services.BuildServiceProvider();
         }
 
-        private async Task RunAsync(string[] args)
+        public async Task RunAsync()
         {
-            _serviceProvider.GetRequiredService<BotClient>();
-            await Task.Delay(-1);
+            var botClient = _serviceProvider.GetRequiredService<BotClient>();
+            await botClient.LoginAndStart();
+        }
+
+        public async Task StopAsync()
+        {
+            var botClient = _serviceProvider.GetRequiredService<BotClient>();
+            await botClient.LogoutAndStop();
+        }
+
+        public BotClient GetBotClient()
+        {
+            return _serviceProvider.GetRequiredService<BotClient>();
         }
     }
 }

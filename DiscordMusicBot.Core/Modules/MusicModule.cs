@@ -7,11 +7,13 @@ using Discord.WebSocket;
 using DiscordMusicBot.Core.Data;
 using DiscordMusicBot.Core.Enums;
 using DiscordMusicBot.Core.Models;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks.Dataflow;
 using YoutubeExplode.Videos.Streams;
@@ -20,7 +22,7 @@ namespace DiscordMusicBot.Core.Modules
 {
     public class MusicModule
     {
-        private ConcurrentDictionary<ulong, GuildMusicModule> _guildHandlers = new();
+        private ConcurrentDictionary<IGuild, GuildMusicModule> _guildHandlers = new();
         private readonly MediaDownloader _mediaDl;
         private readonly BaseFunctions _common;
         private readonly IConfiguration _config;
@@ -74,6 +76,7 @@ namespace DiscordMusicBot.Core.Modules
             return _guildHandlers.GetOrAdd(context.Guild, new GuildMusicModule(context, _mediaDl, _common, _config));
         }
 
+        //Methods to route the received command to the correct guilds music handler.
         public async Task Play(IInteractionContext context, List<Song> songs, bool top, bool shuffle) => await GetOrAddGuild(context).Play(context, songs, top, shuffle);
         public async Task Skip(IInteractionContext context) => await GetOrAddGuild(context).Skip();
         public async Task Skip(IInteractionContext context, int amount) => await GetOrAddGuild(context).Skip(amount);
@@ -94,7 +97,7 @@ namespace DiscordMusicBot.Core.Modules
 
         public async Task Reset(IInteractionContext context)
         {
-            _guildHandlers.Remove(context.Guild.Id, out GuildMusicModule? handler);
+            _guildHandlers.Remove(context.Guild, out GuildMusicModule? handler);
 
             if (handler != null)
             {
@@ -105,9 +108,48 @@ namespace DiscordMusicBot.Core.Modules
             await Task.CompletedTask;
         }
 
+        public async Task RemoveAllHandlers()
+        {
+            foreach (var guildHandler in _guildHandlers.Select(x => x.Value))
+            {
+                await guildHandler.Clear();
+                await guildHandler.Skip();
+            }
+            _guildHandlers.Clear();
+        }
+        
+        public async Task UserVoiceEvent(SocketUser socketUser, SocketVoiceState stateBefore, SocketVoiceState stateAfter)
+        {
+            await Task.Run(async () => {
+                var voiceChannel = stateBefore.VoiceChannel;
+                var guild = stateBefore.VoiceChannel?.Guild;
+
+                if (guild != null && _guildHandlers.TryGetValue(guild, out var guildMusicModule))
+                {
+                    if (voiceChannel != null)
+                    {
+                        var currentVC = guildMusicModule.GetCurrentVoiceChannel();
+                        if (currentVC != stateAfter.VoiceChannel && currentVC != null)
+                        {
+                            var users = voiceChannel.ConnectedUsers;
+
+                            if (!users.Where(x => !x.IsBot).Any())
+                            {
+                                await guildMusicModule.Clear();
+                                await guildMusicModule.Skip();
+                                _guildHandlers.Remove(guild, out var _);
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        public IEnumerable<Tuple<IGuild, List<Song>>> AllQueues => _guildHandlers.Select(x => Tuple.Create(x.Key, x.Value.Queue));
+
         private class GuildMusicModule
         {
-            private ulong _guildId;
+            private IGuild _guild;
             private List<Song> _queue;
             private List<Song> _previous;
             private Task? _queueTask;
@@ -311,7 +353,7 @@ namespace DiscordMusicBot.Core.Modules
             {
                 if (_queueTask == null || _queueTask.IsCompleted)
                 {
-                    Log($"{_guildId}: Starting new queue task");
+                    Log("Starting new queue task");
                     _queueTask = ProcessQueue();
                 }
 
@@ -465,9 +507,9 @@ namespace DiscordMusicBot.Core.Modules
                 return fileStream;
             }
 
-            private void Log(string message)
+            private void Log(string message, string loglevel = "Info")
             {
-                Console.WriteLine($"{_guildId}: {message}");
+                Console.WriteLine($"[MusicModule/{loglevel}] {DateTime.Now.ToString("HH:mm:ss")} {_guild.Id}: {message}");
             }
         }
         
