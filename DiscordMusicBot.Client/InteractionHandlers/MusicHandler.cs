@@ -12,15 +12,15 @@ namespace DiscordMusicBot.Client.InteractionHandlers
     public class MusicHandler : InteractionModuleBase
     {
         private readonly MusicModule _musicModule;
-        private readonly MediaDownloader _youtubeDl;
+        private readonly MediaDownloader _mediaDl;
         private readonly BaseFunctions _common;
         private readonly IConfiguration _config;
         private readonly string zeroWidthSpace = '\u200b'.ToString();
 
-        public MusicHandler(MusicModule musicModule, MediaDownloader youtubeDl, BaseFunctions common, IConfiguration appConfig)
+        public MusicHandler(MusicModule musicModule, MediaDownloader mediaDl, BaseFunctions common, IConfiguration appConfig)
         {
             _musicModule = musicModule;
-            _youtubeDl = youtubeDl;
+            _mediaDl = mediaDl;
             _common = common;
             _config = appConfig;
         }
@@ -98,7 +98,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
 
             try
             {
-                var songs = await _youtubeDl.ProcessURL(url);
+                var songs = await _mediaDl.ProcessURL(url);
                 await _musicModule.Play(Context, songs, top, shuffle);
 
                 if (songs.Count == 1)
@@ -113,7 +113,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
-                builder.WithDescription("Error when adding songs. Was that a youtube/soundcloud link?");
+                builder.WithDescription(e.Message);
             }
 
             await FollowupAsync(embed: builder.Build());
@@ -143,10 +143,10 @@ namespace DiscordMusicBot.Client.InteractionHandlers
                 return;
             }
 
-            var songs = await _musicModule.Queue(Context);
+            var songCount = (await _musicModule.Queue(Context)).Count;
             await _musicModule.Skip(Context, amount);
 
-            builder.WithDescription($"**Skipped** {Math.Min(songs.Count, amount)}");
+            builder.WithDescription($"Skipped {Math.Min(songCount, amount)} songs");
 
             await FollowupAsync(embed: builder.Build());
         }

@@ -5,6 +5,7 @@ using DiscordMusicBot.Core.Enums;
 using SoundCloudExplode;
 using DiscordMusicBot.Core.Extensions;
 using SpotifyExplode;
+using System.Text.RegularExpressions;
 
 namespace DiscordMusicBot.Core.Data
 {
@@ -13,12 +14,28 @@ namespace DiscordMusicBot.Core.Data
         private readonly YoutubeClient _youtubeClient;
         private readonly SoundCloudClient _soundcloudClient;
         private readonly SpotifyClient _spotifyClient;
+        private readonly BandcampClient _bandcampClient;
+
+        private static readonly Regex youtubeLongListRegex = new Regex(@"https:\/\/www(?:\.music)?\.youtube\.com\/watch\?v=.+&list=.+");
+        private static readonly Regex youtubeShortListRegex = new Regex(@"https:\/\/youtu\.be\/.+&list.+");
+        private static readonly Regex youtubeLongVideoRegex = new Regex(@"https:\/\/www(?:\.music)?\.youtube\.com\/watch\?v=.+");
+        private static readonly Regex youtubeShortVideoRegex = new Regex(@"https:\/\/youtu\.be\/.+");
+
+        private static readonly Regex soundCloudPlaylistRegex = new Regex(@"https:\/\/soundcloud\.com\/.+\/sets\/.+");
+        private static readonly Regex soundCloudSongRegex = new Regex(@"https:\/\/soundcloud\.com\/.+");
+
+        private static readonly Regex spotifyPlaylistRegex = new Regex(@"https:\/\/open\.spotify\.com\/playlist\/.+");
+        private static readonly Regex spotifyAlbumRegex = new Regex(@"https:\/\/open\.spotify\.com\/album\/.+");
+        private static readonly Regex spotifyTrackRegex = new Regex(@"https:\/\/open\.spotify\.com\/track\/.+");
+
+        private static readonly Regex bandcampRegex = new Regex(@"(?<artist>https:\/\/.+\.bandcamp\.com\/(?:track|album).+)");
 
         public MediaDownloader()
         {
             _youtubeClient = new YoutubeClient();
             _soundcloudClient = new SoundCloudClient();
             _spotifyClient = new SpotifyClient();
+            _bandcampClient = new BandcampClient();
         }
 
         public async Task<List<Song>> ProcessURL(string url)
@@ -27,7 +44,7 @@ namespace DiscordMusicBot.Core.Data
             {
                 return await ParseYoutubePlaylist(url).ToListAsync();
             }
-            else if (IsYoutube(url))
+            else if (IsYoutubeVideo(url))
             {
                 return new List<Song>() { await CreateYoutubeSong(url) };
             }
@@ -47,9 +64,17 @@ namespace DiscordMusicBot.Core.Data
             {
                 return await ParseSpotifyAlbum(url);
             }
-            else if (IsSpotify(url))
+            else if (IsSpotifyTrack(url))
             {
                 return new List<Song>() { await CreateSpotifySong(url) };
+            } 
+            else if (IsBandcamp(url))
+            {
+                return await ParseBandcamp(url);
+            } 
+            else if (!IsURL(url))
+            {
+                return new List<Song>() { await SearchSong(url) };
             }
             else
             {
@@ -72,6 +97,10 @@ namespace DiscordMusicBot.Core.Data
                 var youtubeVideo = await _youtubeClient.Search.GetVideosAsync($"{song.Name} {song.Artist}", cancellationToken).FirstAsync(cancellationToken);
                 return await GetYoutubeStream(youtubeVideo.Url, cancellationToken);
             }
+            else if (song.Source == SongSource.Bandcamp)
+            {
+                return await _bandcampClient.GetTrackStreamAsync(song.Url, cancellationToken);
+            }
             else
             {
                 throw new NotImplementedException();
@@ -82,11 +111,7 @@ namespace DiscordMusicBot.Core.Data
         {
             var streamManifest = await _youtubeClient.Videos.Streams.GetManifestAsync(url);
             var audioStreamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
-
-            var tempFile = Path.GetTempFileName();
-            await _youtubeClient.Videos.Streams.DownloadAsync(audioStreamInfo, tempFile, cancellationToken: cancellationToken);
-
-            return new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.DeleteOnClose);
+            return await _youtubeClient.Videos.Streams.GetAsync(audioStreamInfo, cancellationToken);
         }
 
         private async Task<Song> CreateYoutubeSong(string url)
@@ -101,6 +126,12 @@ namespace DiscordMusicBot.Core.Data
             {
                 yield return new Song() { Url = video.Url, Name = video.Title, Length = video.Duration ?? default, Source = SongSource.Youtube };
             }
+        }
+
+        private async Task<Song> SearchSong(string searchExpression)
+        {
+            var video = await _youtubeClient.Search.GetVideosAsync(searchExpression).FirstAsync();
+            return new Song() { Url = video.Url, Name = video.Title, Length = video.Duration ?? default, Source = SongSource.Youtube };
         }
 
         private async Task<Song> CreateSoundCloudSong(string url)
@@ -159,9 +190,22 @@ namespace DiscordMusicBot.Core.Data
             }).ToList();
         }
 
-        private bool IsYoutube(string url)
+        private async Task<List<Song>> ParseBandcamp(string url)
         {
-            if (url.Contains("youtube.com") || url.Contains("youtu.be"))
+            var album = await _bandcampClient.GetAlbumAsync(url);
+
+            return album.Tracks.Select(track => new Song() 
+            { 
+                Url = track.File.DownloadLink,
+                Name = track.Title,
+                Length = TimeSpan.FromSeconds(track.Duration),
+                Source = SongSource.Bandcamp
+            }).ToList();
+        }
+
+        private bool IsYoutubeVideo(string url)
+        {
+            if (youtubeLongVideoRegex.IsMatch(url) || youtubeShortVideoRegex.IsMatch(url))
             {
                 return true;
             }
@@ -171,12 +215,9 @@ namespace DiscordMusicBot.Core.Data
 
         private bool IsYoutubePlaylist(string url)
         {
-            if (IsYoutube(url))
+            if (youtubeLongListRegex.IsMatch(url) || youtubeShortListRegex.IsMatch(url))
             {
-                if (url.Contains("&list"))
-                {
-                    return true;
-                }
+                return true;
             }
 
             return false;
@@ -184,7 +225,7 @@ namespace DiscordMusicBot.Core.Data
 
         private bool IsSoundCloud(string url)
         {
-            if (url.Contains("soundcloud.com"))
+            if (soundCloudSongRegex.IsMatch(url))
             {
                 return true;
             }
@@ -194,20 +235,17 @@ namespace DiscordMusicBot.Core.Data
 
         private bool IsSoundCloudPlaylist(string url)
         {
-            if (IsSoundCloud(url))
+            if (soundCloudPlaylistRegex.IsMatch(url))
             {
-                if (url.Contains("/playlist") || url.Contains("/sets/"))
-                {
-                    return true;
-                }
+                return true;
             }
 
             return false;
         }
 
-        private bool IsSpotify(string url)
+        private bool IsSpotifyTrack(string url)
         {
-            if (url.Contains("open.spotify"))
+            if (spotifyTrackRegex.IsMatch(url))
             {
                 return true;
             }
@@ -217,12 +255,9 @@ namespace DiscordMusicBot.Core.Data
 
         private bool IsSpotifyPlaylist(string url)
         {
-            if (IsSpotify(url))
+            if (spotifyPlaylistRegex.IsMatch(url))
             {
-                if (url.Contains("/playlist/"))
-                {
-                    return true;
-                }
+                return true;
             }
 
             return false;
@@ -230,12 +265,25 @@ namespace DiscordMusicBot.Core.Data
 
         private bool IsSpotifyAlbum(string url)
         {
-            if (IsSpotify(url))
+            if (spotifyAlbumRegex.IsMatch(url))
             {
-                if (url.Contains("/album/"))
-                {
-                    return true;
-                }
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool IsBandcamp(string url)
+        {
+            return bandcampRegex.IsMatch(url);
+        }
+
+        private bool IsURL(string url)
+        {
+            if (Uri.IsWellFormedUriString(url, UriKind.RelativeOrAbsolute))
+            {
+                var uri = new Uri(url);
+                return uri.Scheme == Uri.UriSchemeHttps;
             }
 
             return false;

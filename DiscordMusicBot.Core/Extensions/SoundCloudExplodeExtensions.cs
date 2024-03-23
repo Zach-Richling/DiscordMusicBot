@@ -29,13 +29,7 @@ namespace DiscordMusicBot.Core.Extensions
 
             response.EnsureSuccessStatusCode();
 
-            var tempFileName = Path.GetTempFileName();
-            using (var tempFileStream = System.IO.File.OpenWrite(tempFileName))
-            {
-                await response.Content.CopyToAsync(tempFileStream, cancellationToken);
-            }
-
-            return new FileStream(tempFileName, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.DeleteOnClose);
+            return await response.Content.ReadAsStreamAsync(cancellationToken);
         }
     }
 }

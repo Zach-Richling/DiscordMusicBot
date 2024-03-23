@@ -176,7 +176,7 @@ namespace DiscordMusicBot.Core.Modules
 
                 lock (_lock) 
                 {
-                    if (top && _queue.Any())
+                    if (top && _queue.Count != 0)
                     {
                         _queue.InsertRange(1, songs);
                     }
@@ -196,7 +196,7 @@ namespace DiscordMusicBot.Core.Modules
 
             public async Task<bool> Join(IInteractionContext context)
             {
-                if (_queue.Any())
+                if (_queue.Count != 0)
                 {
                     _requestedVC = ((IGuildUser)context.User).VoiceChannel;
                     _queue.Insert(1, _queue[0]);
@@ -226,9 +226,9 @@ namespace DiscordMusicBot.Core.Modules
             {
                 lock(_lock)
                 {
-                    if (_queue.Count < 1) 
+                    if (_queue.Count > 1) 
                     {
-                        _queue.RemoveRange(1, Math.Min(amount - 1, _queue.Count));
+                        _queue.RemoveRange(1, Math.Min(amount - 1, _queue.Count - 1));
                         _songAction = SongAction.Skip;
                         _tokenSource.Cancel();
                     }
@@ -335,7 +335,7 @@ namespace DiscordMusicBot.Core.Modules
             
             private async Task ProcessQueue()
             {
-                while (_queue.Any())
+                while (_queue.Count != 0)
                 {
                     try
                     {
@@ -466,18 +466,17 @@ namespace DiscordMusicBot.Core.Modules
 
             private async Task<Stream> StartFFMPEG(Stream audioStream, CancellationToken cancellationToken)
             {
-                FileStream fileStream = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
-
+                MemoryStream ms = new MemoryStream();
                 var audioDir = _config["AudioDirectory"]!.ToString();
 
                 await Cli.Wrap(Path.Combine(audioDir, "ffmpeg.exe"))
                     .WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1")
                     .WithStandardInputPipe(PipeSource.FromStream(audioStream))
-                    .WithStandardOutputPipe(PipeTarget.ToStream(fileStream))
+                    .WithStandardOutputPipe(PipeTarget.ToStream(ms))
                     .ExecuteAsync(cancellationToken);
 
-                fileStream.Seek(0, SeekOrigin.Begin);
-                return fileStream;
+                ms.Seek(0, SeekOrigin.Begin);
+                return ms;
             }
 
             private void Log(string message, string loglevel = "Info")

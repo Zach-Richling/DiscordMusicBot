@@ -10,6 +10,7 @@ namespace DiscordMusicBot.Core.Enums
     {
         Youtube,
         SoundCloud,
-        Spotify
+        Spotify,
+        Bandcamp
     }
 }
