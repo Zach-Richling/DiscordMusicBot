@@ -40,7 +40,7 @@ namespace DiscordMusicBot.Core.Data
             return album;
         }
 
-        public async Task<Stream> GetTrackStreamAsync(string url, CancellationToken cancellationToken)
+        public async Task<Stream> GetStreamAsync(string url, CancellationToken cancellationToken)
         {
             var response = await _httpClient.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();

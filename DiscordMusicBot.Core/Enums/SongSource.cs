@@ -11,6 +11,7 @@ namespace DiscordMusicBot.Core.Enums
         Youtube,
         SoundCloud,
         Spotify,
-        Bandcamp
+        Bandcamp,
+        Apple
     }
 }

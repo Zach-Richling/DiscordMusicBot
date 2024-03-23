@@ -27,16 +27,15 @@ namespace DiscordMusicBot.Core.Data
                 SongSource.SoundCloud => _config["SoundCloudEmoji"] ?? "",
                 SongSource.Spotify => _config["SpotifyEmoji"] ?? "",
                 SongSource.Bandcamp => _config["BandcampEmoji"] ?? "",
+                SongSource.Apple => _config["AppleEmoji"] ?? "",
                 _ => ""
             };
 
             string name = song.Source switch
             {
-                SongSource.Youtube => song.Name,
-                SongSource.Bandcamp => song.Name,
-                SongSource.SoundCloud => $"{song.Name} by {song.Artist}",
-                SongSource.Spotify => $"{song.Name} by {song.Artist}",
-                _ => ""
+                SongSource.Youtube or SongSource.Bandcamp => song.Name,
+                SongSource.SoundCloud or SongSource.Spotify or SongSource.Apple => $"{song.Name} by {song.Artist}",
+                _ => song.Name
             };
             return $"{emoji} {name.Replace("*", "\\*")}";
         }
