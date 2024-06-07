@@ -390,9 +390,14 @@ namespace DiscordMusicBot.Core.Modules
             {
                 _songAction = SongAction.None;
 
-                Song currentSong = _queue[0];
+                Song? currentSong;
 
-                if (_requestedVC == null)
+                lock(_lock)
+                {
+                    currentSong = _queue.FirstOrDefault();
+                }
+
+                if (_requestedVC == null || currentSong == null)
                 {
                     return;
                 }

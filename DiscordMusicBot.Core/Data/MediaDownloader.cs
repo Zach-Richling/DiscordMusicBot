@@ -17,9 +17,9 @@ namespace DiscordMusicBot.Core.Data
         private readonly BandcampClient _bandcampClient;
         private readonly AppleClient _appleClient;
 
-        private static readonly Regex youtubeLongListRegex = new Regex(@"https:\/\/www(?:\.music)?\.youtube\.com\/watch\?v=.+&list=.+");
+        private static readonly Regex youtubeLongListRegex = new Regex(@"https:\/\/(?:www\.)?(?:music\.)?youtube\.com\/watch\?v=.+&list=.+");
         private static readonly Regex youtubeShortListRegex = new Regex(@"https:\/\/youtu\.be\/.+&list.+");
-        private static readonly Regex youtubeLongVideoRegex = new Regex(@"https:\/\/www(?:\.music)?\.youtube\.com\/watch\?v=.+");
+        private static readonly Regex youtubeLongVideoRegex = new Regex(@"https:\/\/(?:www\.)?(?:music\.)?youtube\.com\/watch\?v=.+");
         private static readonly Regex youtubeShortVideoRegex = new Regex(@"https:\/\/youtu\.be\/.+");
 
         private static readonly Regex soundCloudPlaylistRegex = new Regex(@"https:\/\/soundcloud\.com\/.+\/sets\/.+");
@@ -170,9 +170,9 @@ namespace DiscordMusicBot.Core.Data
 
         private async Task<List<Song>> ParseSpotifyPlaylist(string url)
         {
-            var tracks = await _spotifyClient.Playlists.GetTracksAsync(url);
+            var tracks = await _spotifyClient.Playlists.GetTracksAsync(url); 
 
-            return tracks.Select(track => new Song()
+            return tracks.Where(x => x != null).Select(track => new Song()
             {
                 Url = track.Url,
                 Name = track.Title,
