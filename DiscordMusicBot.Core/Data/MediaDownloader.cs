@@ -17,22 +17,23 @@ namespace DiscordMusicBot.Core.Data
         private readonly BandcampClient _bandcampClient;
         private readonly AppleClient _appleClient;
 
-        private static readonly Regex youtubeLongListRegex = new Regex(@"https:\/\/(?:www\.)?(?:music\.)?youtube\.com\/watch\?v=.+&list=.+");
-        private static readonly Regex youtubeShortListRegex = new Regex(@"https:\/\/youtu\.be\/.+&list.+");
-        private static readonly Regex youtubeLongVideoRegex = new Regex(@"https:\/\/(?:www\.)?(?:music\.)?youtube\.com\/watch\?v=.+");
-        private static readonly Regex youtubeShortVideoRegex = new Regex(@"https:\/\/youtu\.be\/.+");
+        private static readonly Regex youtubeLongListRegex = new Regex(@"(?:https:\/\/)?(?:www\.)?(?:music\.)?youtube\.com\/watch\?v=.+&list=.+");
+        private static readonly Regex youtubeShortListRegex = new Regex(@"(?:https:\/\/)?youtu\.be\/.+&list.+");
+        private static readonly Regex youtubeLongPlaylistRegex = new Regex(@"(?:https:\/\/)?(?:www\.)?(?:music\.)?youtube\.com\/playlist\?list=.+");
+        private static readonly Regex youtubeLongVideoRegex = new Regex(@"(?:https:\/\/)?(?:www\.)?(?:music\.)?youtube\.com\/watch\?v=.+");
+        private static readonly Regex youtubeShortVideoRegex = new Regex(@"(?:https:\/\/)?youtu\.be\/.+");
 
-        private static readonly Regex soundCloudPlaylistRegex = new Regex(@"https:\/\/soundcloud\.com\/.+\/sets\/.+");
-        private static readonly Regex soundCloudSongRegex = new Regex(@"https:\/\/soundcloud\.com\/.+");
+        private static readonly Regex soundCloudPlaylistRegex = new Regex(@"(?:https:\/\/)?soundcloud\.com\/.+\/sets\/.+");
+        private static readonly Regex soundCloudSongRegex = new Regex(@"(?:https:\/\/)?soundcloud\.com\/.+");
 
-        private static readonly Regex spotifyPlaylistRegex = new Regex(@"https:\/\/open\.spotify\.com\/playlist\/.+");
-        private static readonly Regex spotifyAlbumRegex = new Regex(@"https:\/\/open\.spotify\.com\/album\/.+");
-        private static readonly Regex spotifyTrackRegex = new Regex(@"https:\/\/open\.spotify\.com\/track\/.+");
+        private static readonly Regex spotifyPlaylistRegex = new Regex(@"(?:https:\/\/)?open\.spotify\.com\/playlist\/.+");
+        private static readonly Regex spotifyAlbumRegex = new Regex(@"(?:https:\/\/)?open\.spotify\.com\/album\/.+");
+        private static readonly Regex spotifyTrackRegex = new Regex(@"(?:https:\/\/)?open\.spotify\.com\/track\/.+");
 
-        private static readonly Regex bandcampRegex = new Regex(@"(?<artist>https:\/\/.+\.bandcamp\.com\/(?:track|album).+)");
+        private static readonly Regex bandcampRegex = new Regex(@"(?:https:\/\/)?.+\.bandcamp\.com\/(?:track|album).+");
 
-        private static readonly Regex appleAlbumRegex = new Regex(@"https:\/\/music\.apple\.com\/.+\/album\/.+");
-        private static readonly Regex appleSongRegex = new Regex(@"https:\/\/music\.apple\.com\/.+\/song\/.+");
+        private static readonly Regex appleAlbumRegex = new Regex(@"(?:https:\/\/)?music\.apple\.com\/.+\/album\/.+");
+        private static readonly Regex appleSongRegex = new Regex(@"(?:https:\/\/)?music\.apple\.com\/.+\/song\/.+");
 
         public MediaDownloader()
         {
@@ -244,7 +245,7 @@ namespace DiscordMusicBot.Core.Data
 
         private bool IsYoutubePlaylist(string url)
         {
-            return youtubeLongListRegex.IsMatch(url) || youtubeShortListRegex.IsMatch(url);
+            return youtubeLongListRegex.IsMatch(url) || youtubeShortListRegex.IsMatch(url) || youtubeLongPlaylistRegex.IsMatch(url);
         }
 
         private bool IsSoundCloud(string url)
