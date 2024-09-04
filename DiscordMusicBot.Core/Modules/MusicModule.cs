@@ -118,8 +118,6 @@ namespace DiscordMusicBot.Core.Modules
             });
         }
 
-        public IEnumerable<Tuple<IGuild, List<Song>>> AllQueues => _guildHandlers.Select(x => Tuple.Create(x.Key, x.Value.Queue));
-
         private class GuildMusicModule
         {
             private IGuild _guild;
@@ -131,7 +129,6 @@ namespace DiscordMusicBot.Core.Modules
             private IAudioClient? _audioClient;
 
 
-            private IInteractionContext _context;
             private IVoiceChannel? _requestedVC;
             private IMessageChannel _messageChannel;
             private readonly MediaDownloader _mediaDl;
@@ -141,11 +138,8 @@ namespace DiscordMusicBot.Core.Modules
             private object _lock = new();
             private SongAction _songAction = SongAction.None;
 
-            public List<Song> Queue { get { return _queue; } }
-
             public GuildMusicModule(IInteractionContext context, MediaDownloader mediaDl, BaseFunctions common, IConfiguration config)
             {
-                _context = context;
                 _requestedVC = ((IGuildUser)context.User).VoiceChannel;
                 _messageChannel = context.Channel;
                 _mediaDl = mediaDl;

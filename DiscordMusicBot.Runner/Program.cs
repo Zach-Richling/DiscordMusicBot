@@ -51,6 +51,10 @@ namespace DiscordMusicBot.Runner
             services.AddSingleton<MusicModule>();
             services.AddSingleton<MovieModule>();
             services.AddSingleton<BaseFunctions>();
+            services.AddSingleton<AiImageModule>();
+            services.AddSingleton<FalAIClient>();
+
+            services.AddHttpClient();
 
             return services.BuildServiceProvider();
         }

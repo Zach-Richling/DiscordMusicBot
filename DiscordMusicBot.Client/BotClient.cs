@@ -19,35 +19,6 @@ namespace DiscordMusicBot.Client
         private InteractionService _interactionService;
         private MusicModule _musicModule;
 
-        //Expose some information from the discord client for the UI to display.
-        public string LoginStatus { get { return _discordClient.LoginState.ToString(); } }
-        public string ConnectionStatus { get { return _discordClient.ConnectionState.ToString(); } }
-        public IEnumerable<Tuple<IGuild, List<Song>>> AllQueues => _musicModule.AllQueues;
-
-        public event Func<Task> LoggedIn 
-        { 
-            add { _discordClient.LoggedIn += value; } 
-            remove { _discordClient.LoggedIn -= value; } 
-        }
-
-        public event Func<Task> LoggedOut
-        {
-            add { _discordClient.LoggedOut += value; }
-            remove { _discordClient.LoggedOut -= value; }
-        }
-
-        public event Func<Task> Connected
-        {
-            add { _discordClient.Connected += value; }
-            remove { _discordClient.Connected -= value; }
-        }
-
-        public event Func<Exception, Task> Disconnected
-        {
-            add { _discordClient.Disconnected += value; }
-            remove { _discordClient.Disconnected -= value; }
-        }
-
         public BotClient(IConfiguration appConfig, IServiceProvider serviceProvider, DiscordSocketConfig discordConfig, InteractionServiceConfig interactionConfig, MusicModule musicModule)
         {
             _config = appConfig;

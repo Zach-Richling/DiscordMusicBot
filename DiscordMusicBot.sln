@@ -9,10 +9,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DiscordMusicBot.Client", "D
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DiscordMusicBot.Core", "DiscordMusicBot.Core\DiscordMusicBot.Core.csproj", "{DCC4AFEB-DFCB-4A2A-8D3A-15F7D3C91941}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DiscordMusicBot.FrontEnd", "DiscordMusicBot.FrontEnd\DiscordMusicBot.FrontEnd.csproj", "{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DiscordMusicBot.FrontEnd.Desktop", "DiscordMusicBot.FrontEnd.Desktop\DiscordMusicBot.FrontEnd.Desktop.csproj", "{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -73,38 +69,6 @@ Global
 		{DCC4AFEB-DFCB-4A2A-8D3A-15F7D3C91941}.Release|x64.Build.0 = Release|Any CPU
 		{DCC4AFEB-DFCB-4A2A-8D3A-15F7D3C91941}.Release|x86.ActiveCfg = Release|Any CPU
 		{DCC4AFEB-DFCB-4A2A-8D3A-15F7D3C91941}.Release|x86.Build.0 = Release|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Debug|ARM64.Build.0 = Debug|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Debug|x64.Build.0 = Debug|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Debug|x86.Build.0 = Debug|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Release|ARM64.Build.0 = Release|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Release|x64.ActiveCfg = Release|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Release|x64.Build.0 = Release|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Release|x86.ActiveCfg = Release|Any CPU
-		{90BF1B89-703C-4FE5-BA11-8BDA3B6F0D1A}.Release|x86.Build.0 = Release|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Debug|ARM64.Build.0 = Debug|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Debug|x64.Build.0 = Debug|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Debug|x86.Build.0 = Debug|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Release|ARM64.Build.0 = Release|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Release|x64.ActiveCfg = Release|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Release|x64.Build.0 = Release|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Release|x86.ActiveCfg = Release|Any CPU
-		{FF5F1FD7-E42C-49E9-BE44-43DFF7E9A57E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
