@@ -23,11 +23,11 @@ namespace DiscordMusicBot.Core.Data
 
         public async Task<GenerateImageResponse?> GenerateImage(string prompt, string? model = null)
         {
-            model ??= "https://fal.run/fal-ai/flux/schnell";
+            model ??= "fal-ai/flux/schnell";
 
             var content = new StringContent(JsonConvert.SerializeObject(new { prompt, enable_safety_checker = false }), Encoding.UTF8, "application/json");
 
-            var request = await _httpClient.PostAsync(model, content);
+            var request = await _httpClient.PostAsync($"https://fal.run/{model}", content);
 
             request.EnsureSuccessStatusCode();
 
