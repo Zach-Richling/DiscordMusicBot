@@ -6,6 +6,11 @@ using SoundCloudExplode;
 using DiscordMusicBot.Core.Extensions;
 using SpotifyExplode;
 using System.Text.RegularExpressions;
+using CliWrap;
+using Discord.Audio;
+using Microsoft.Extensions.Configuration;
+using System.Text;
+using System.Diagnostics;
 
 namespace DiscordMusicBot.Core.Data
 {
@@ -35,13 +40,16 @@ namespace DiscordMusicBot.Core.Data
         private static readonly Regex appleAlbumRegex = new Regex(@"(?:https:\/\/)?music\.apple\.com\/.+\/album\/.+");
         private static readonly Regex appleSongRegex = new Regex(@"(?:https:\/\/)?music\.apple\.com\/.+\/song\/.+");
 
-        public MediaDownloader()
+        private readonly IConfiguration _config;
+
+        public MediaDownloader(IConfiguration config)
         {
             _youtubeClient = new YoutubeClient();
             _soundcloudClient = new SoundCloudClient();
             _spotifyClient = new SpotifyClient();
             _bandcampClient = new BandcampClient();
             _appleClient = new AppleClient();
+            _config = config;
         }
 
         public async Task<List<Song>> ProcessURL(string url)
@@ -110,9 +118,15 @@ namespace DiscordMusicBot.Core.Data
 
         private async Task<Stream> GetYoutubeStream(string url, CancellationToken cancellationToken)
         {
-            var streamManifest = await _youtubeClient.Videos.Streams.GetManifestAsync(url);
-            var audioStreamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
-            return await _youtubeClient.Videos.Streams.GetAsync(audioStreamInfo, cancellationToken);
+            var audioDir = _config["AudioDirectory"]!.ToString();
+            var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".tmp");
+
+            await Process.Start(
+                Path.Combine(audioDir, "yt-dlp.exe")
+                ,$"\"{url}\" --no-playlist --format \"bestaudio[ext=m4a]\" -o \"{tempFile}\""
+            ).WaitForExitAsync();
+
+            return new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.DeleteOnClose);
         }
 
         private async Task<Song> CreateYoutubeSong(string url)
