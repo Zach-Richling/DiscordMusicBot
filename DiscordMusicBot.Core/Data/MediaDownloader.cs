@@ -45,7 +45,7 @@ namespace DiscordMusicBot.Core.Data
         public MediaDownloader(IConfiguration config)
         {
             _youtubeClient = new YoutubeClient();
-            _soundcloudClient = new SoundCloudClient();
+            _soundcloudClient = new SoundCloudClient(config["SoundCloudClientId"]!.ToString());
             _spotifyClient = new SpotifyClient();
             _bandcampClient = new BandcampClient();
             _appleClient = new AppleClient();
