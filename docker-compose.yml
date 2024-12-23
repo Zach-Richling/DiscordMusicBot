@@ -1,0 +1,10 @@
+services:
+  discordmusicbot.runner:
+    image: ${DOCKER_REGISTRY-}discordmusicbotrunner
+    build:
+      context: .
+      dockerfile: DiscordMusicBot.Runner/Dockerfile
+    volumes:
+      - type: bind
+        source: ./DiscordMusicBot.Runner/appsettings.json
+        target: /app/appsettings.json

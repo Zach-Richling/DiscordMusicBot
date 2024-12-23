@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "DiscordMusicBot.Runner": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

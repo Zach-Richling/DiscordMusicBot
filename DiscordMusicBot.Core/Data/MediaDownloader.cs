@@ -118,11 +118,10 @@ namespace DiscordMusicBot.Core.Data
 
         private async Task<Stream> GetYoutubeStream(string url, CancellationToken cancellationToken)
         {
-            var audioDir = _config["AudioDirectory"]!.ToString();
             var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".tmp");
 
             await Process.Start(
-                Path.Combine(audioDir, "yt-dlp.exe")
+                "yt-dlp"
                 ,$"\"{url}\" --no-playlist --format \"bestaudio[ext=m4a]\" -o \"{tempFile}\""
             ).WaitForExitAsync();
 

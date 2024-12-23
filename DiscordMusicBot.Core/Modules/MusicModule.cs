@@ -27,21 +27,11 @@ namespace DiscordMusicBot.Core.Modules
         private readonly BaseFunctions _common;
         private readonly IConfiguration _config;
 
-        [DllImport("kernel32", SetLastError = true)]
-        private static extern IntPtr LoadLibrary(string lpFileName);
-
         public MusicModule(MediaDownloader mediaDl, BaseFunctions common, IConfiguration config)
         {
             _mediaDl = mediaDl;
             _common = common;
             _config = config;
-
-            var audioDir = config["AudioDirectory"]?.ToString();
-            if (!string.IsNullOrEmpty(audioDir)) 
-            {
-                LoadLibrary(Path.Combine(audioDir, "opus.dll"));
-                LoadLibrary(Path.Combine(audioDir, "libsodium.dll"));
-            }
         }
 		
         private GuildMusicModule GetOrAddGuild(IInteractionContext context) 
@@ -424,9 +414,9 @@ namespace DiscordMusicBot.Core.Modules
                             {
                                 int currentPosition;
                                 byte[] buffer = new byte[4096];
-                                while ((currentPosition = await ffmpegStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                                while ((currentPosition = await ffmpegStream.ReadAsync(buffer)) > 0)
                                 {
-                                    await discordStream.WriteAsync(buffer, 0, currentPosition, _tokenSource.Token);
+                                    await discordStream.WriteAsync(buffer.AsMemory(0, currentPosition), _tokenSource.Token);
                                 }
                             }
                             finally
@@ -466,9 +456,8 @@ namespace DiscordMusicBot.Core.Modules
             private async Task<Stream> StartFFMPEG(Stream audioStream, CancellationToken cancellationToken)
             {
                 MemoryStream ms = new MemoryStream();
-                var audioDir = _config["AudioDirectory"]!.ToString();
 
-                await Cli.Wrap(Path.Combine(audioDir, "ffmpeg.exe"))
+                await Cli.Wrap("ffmpeg")
                     .WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1")
                     .WithStandardInputPipe(PipeSource.FromStream(audioStream))
                     .WithStandardOutputPipe(PipeTarget.ToStream(ms))
