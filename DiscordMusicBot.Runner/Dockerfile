@@ -32,4 +32,5 @@ RUN dotnet publish "./DiscordMusicBot.Runner.csproj" -c $BUILD_CONFIGURATION -o 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+VOLUME /app/appsettings.json
 ENTRYPOINT ["dotnet", "DiscordMusicBot.Runner.dll"]
