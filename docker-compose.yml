@@ -5,6 +5,4 @@ services:
       context: .
       dockerfile: DiscordMusicBot.Runner/Dockerfile
     volumes:
-      - type: bind
-        source: ./DiscordMusicBot.Runner/appsettings.json
-        target: /app/appsettings.json
+      - ./DiscordMusicBot.Runner/appsettings.json:/app/appsettings.json
