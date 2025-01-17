@@ -467,7 +467,7 @@ namespace DiscordMusicBot.Core.Modules
                 MemoryStream ms = new MemoryStream();
 
                 await Cli.Wrap("ffmpeg")
-                    .WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1")
+                    .WithArguments(" -hide_banner -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1")
                     .WithStandardInputPipe(PipeSource.FromStream(audioStream))
                     .WithStandardOutputPipe(PipeTarget.ToStream(ms))
                     .ExecuteAsync(cancellationToken);

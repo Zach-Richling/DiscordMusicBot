@@ -122,7 +122,7 @@ namespace DiscordMusicBot.Core.Data
 
             await Process.Start(
                 "yt-dlp"
-                ,$"\"{url}\" --no-playlist --format \"bestaudio[ext=m4a]\" -o \"{tempFile}\""
+                ,$"\"{url}\" --no-playlist --fixup never --format \"bestaudio[ext=m4a]\" -o \"{tempFile}\""
             ).WaitForExitAsync();
 
             return new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.DeleteOnClose);
