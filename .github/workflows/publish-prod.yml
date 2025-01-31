@@ -19,5 +19,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: puddlebuddy/puddlebot:latest
+          context: .
+          file: DiscordMusicBot.Runner/Dockerfile
+          tags: puddlebuddy/puddle-bot
         
