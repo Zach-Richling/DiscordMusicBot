@@ -5,10 +5,14 @@ FROM mcr.microsoft.com/dotnet/runtime:9.0-noble AS base
 USER root
 WORKDIR /app
 RUN apt-get update
+
+RUN apt-get install software-properties-common -y
 RUN apt-get install ffmpeg -y
-RUN apt-get install yt-dlp -y
 RUN apt-get install libopus-dev -y
 RUN apt-get install libsodium-dev -y
+
+RUN add-apt-repository ppa:tomtomtom/yt-dlp
+RUN apt-get install yt-dlp -y
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:9.0-noble AS build
@@ -32,5 +36,7 @@ RUN dotnet publish "./DiscordMusicBot.Runner.csproj" -c $BUILD_CONFIGURATION -o 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-VOLUME /app/appsettings.json
+
+VOLUME /app/resources
+
 ENTRYPOINT ["dotnet", "DiscordMusicBot.Runner.dll"]

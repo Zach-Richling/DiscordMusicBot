@@ -5,4 +5,4 @@ services:
       context: .
       dockerfile: DiscordMusicBot.Runner/Dockerfile
     volumes:
-      - ./DiscordMusicBot.Runner/appsettings.json:/app/appsettings.json
+      - ./DiscordMusicBot.Runner/appsettings.json:/app/resources/appsettings.json

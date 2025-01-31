@@ -22,6 +22,7 @@
 **/secrets.dev.yaml
 **/values.dev.yaml
 **/appsettings.json
+**/cookies.txt
 LICENSE
 README.md
 !**/.gitignore

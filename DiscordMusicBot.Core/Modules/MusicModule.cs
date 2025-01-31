@@ -395,7 +395,6 @@ namespace DiscordMusicBot.Core.Modules
                 Log("Getting audio stream");
                 using Stream audioStream = await _mediaDl.StreamAudio(currentSong, _tokenSource.Token);
                 Log($"Finished getting audio stream: {timer.Elapsed.TotalSeconds}");
-                timer.Stop();
 
                 IUserMessage nowPlayingMessage = await SendNowPlayingMessage(currentSong);
 
@@ -416,7 +415,6 @@ namespace DiscordMusicBot.Core.Modules
                         {
                             try
                             {
-                                timer.Restart();
                                 Log("Writing audio to discord");
                                 int currentPosition;
                                 byte[] buffer = new byte[4096];
@@ -424,7 +422,6 @@ namespace DiscordMusicBot.Core.Modules
                                 {
                                     await discordStream.WriteAsync(buffer.AsMemory(0, currentPosition), _tokenSource.Token);
                                 }
-                                Log($"Finished writing audio to discord: {timer.Elapsed.TotalSeconds}");
                             }
                             finally
                             {

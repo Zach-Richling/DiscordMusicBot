@@ -112,6 +112,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             }
             catch (Exception e)
             {
+                
                 Console.WriteLine(e.ToString());
                 builder.WithDescription(e.Message);
             }
@@ -300,7 +301,7 @@ namespace DiscordMusicBot.Client.InteractionHandlers
             await FollowupAsync(embed: builder.Build());
         }
 
-        [SlashCommand("join", "Makes the bot join to the users channel", runMode: RunMode.Async)]
+        [SlashCommand("join", "Makes the bot join the users channel", runMode: RunMode.Async)]
         public async Task JoinAsync()
         {
             await DeferAsync();
