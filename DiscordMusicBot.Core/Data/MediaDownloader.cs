@@ -116,14 +116,12 @@ namespace DiscordMusicBot.Core.Data
             };
         }
 
-        private async Task<Stream> GetYoutubeStream(string url, CancellationToken cancellationToken)
+        private static async Task<Stream> GetYoutubeStream(string url, CancellationToken cancellationToken)
         {
             var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".tmp");
+            var args = $"\"{url}\" --no-playlist --fixup never --format \"bestaudio[ext=m4a]\" -o \"{tempFile}\"";
 
-            await Process.Start(
-                "yt-dlp"
-                ,$"\"{url}\" --no-playlist --format \"bestaudio[ext=m4a]\" -o \"{tempFile}\""
-            ).WaitForExitAsync();
+            await Process.Start("yt-dlp", args).WaitForExitAsync(cancellationToken);
 
             return new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.DeleteOnClose);
         }

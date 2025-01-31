@@ -391,7 +391,10 @@ namespace DiscordMusicBot.Core.Modules
                     _audioClient = await _requestedVC.ConnectAsync();
                 }
 
+                var timer = Stopwatch.StartNew();
+                Log("Getting audio stream");
                 using Stream audioStream = await _mediaDl.StreamAudio(currentSong, _tokenSource.Token);
+                Log($"Finished getting audio stream: {timer.Elapsed.TotalSeconds}");
 
                 IUserMessage nowPlayingMessage = await SendNowPlayingMessage(currentSong);
 
@@ -412,6 +415,7 @@ namespace DiscordMusicBot.Core.Modules
                         {
                             try
                             {
+                                Log("Writing audio to discord");
                                 int currentPosition;
                                 byte[] buffer = new byte[4096];
                                 while ((currentPosition = await ffmpegStream.ReadAsync(buffer)) > 0)
@@ -455,15 +459,21 @@ namespace DiscordMusicBot.Core.Modules
 
             private async Task<Stream> StartFFMPEG(Stream audioStream, CancellationToken cancellationToken)
             {
+                var timer = Stopwatch.StartNew();
+                Log("Transcoding with FFMPEG");
                 MemoryStream ms = new MemoryStream();
 
                 await Cli.Wrap("ffmpeg")
-                    .WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1")
+                    .WithArguments(" -hide_banner -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1")
                     .WithStandardInputPipe(PipeSource.FromStream(audioStream))
                     .WithStandardOutputPipe(PipeTarget.ToStream(ms))
                     .ExecuteAsync(cancellationToken);
 
                 ms.Seek(0, SeekOrigin.Begin);
+
+                Log($"Finished transcoding with FFMPEG: {timer.Elapsed.TotalSeconds}");
+                timer.Stop();
+
                 return ms;
             }
 

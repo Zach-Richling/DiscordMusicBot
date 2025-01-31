@@ -28,7 +28,7 @@ namespace DiscordMusicBot.Runner
 
         private static IServiceProvider CreateProvider()
         {
-            var appconfig = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+            var appconfig = new ConfigurationBuilder().AddJsonFile(Path.Combine("resources", "appsettings.json")).Build();
             var services = new ServiceCollection();
 
             var discordConfig = new DiscordSocketConfig()
