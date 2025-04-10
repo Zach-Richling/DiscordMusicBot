@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <Version>1.1</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.35" />
