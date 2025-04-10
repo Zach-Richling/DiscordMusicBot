@@ -19,4 +19,9 @@
     <ProjectReference Include="..\DiscordMusicBot.Client\DiscordMusicBot.Client.csproj" />
     <ProjectReference Include="..\DiscordMusicBot.Core\DiscordMusicBot.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
