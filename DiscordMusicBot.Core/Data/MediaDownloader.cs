@@ -60,7 +60,7 @@ namespace DiscordMusicBot.Core.Data
             }
             else if (IsYoutubeVideo(url))
             {
-                return new List<Song>() { await CreateYoutubeSong(url) };
+                return [await CreateYoutubeSong(url)];
             }
             else if (IsSoundCloudPlaylist(url))
             {
@@ -68,7 +68,7 @@ namespace DiscordMusicBot.Core.Data
             }
             else if (IsSoundCloud(url))
             {
-                return new List<Song>() { await CreateSoundCloudSong(url) };
+                return [await CreateSoundCloudSong(url)];
             }
             else if (IsSpotifyPlaylist(url))
             {
@@ -80,7 +80,7 @@ namespace DiscordMusicBot.Core.Data
             }
             else if (IsSpotifyTrack(url))
             {
-                return new List<Song>() { await CreateSpotifySong(url) };
+                return [await CreateSpotifySong(url)];
             } 
             else if (IsBandcamp(url))
             {
@@ -92,11 +92,11 @@ namespace DiscordMusicBot.Core.Data
             }
             else if (IsAppleSong(url))
             {
-                return new List<Song>() { await CreateAppleSong(url) };
+                return [await CreateAppleSong(url)];
             }
             else if (!IsURL(url))
             {
-                return new List<Song>() { await SearchSong(url) };
+                return [await SearchSong(url)];
             }
             else
             {
@@ -118,12 +118,23 @@ namespace DiscordMusicBot.Core.Data
 
         private static async Task<Stream> GetYoutubeStream(string url, CancellationToken cancellationToken)
         {
-            var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".tmp");
-            var args = $"\"{url}\" --no-playlist --fixup never --format \"bestaudio[ext=m4a]\" -o \"{tempFile}\"";
+            var formatPath = Path.Combine(Path.GetTempPath(), "%(id)s.%(ext)s");
 
-            await Process.Start("yt-dlp", args).WaitForExitAsync(cancellationToken);
+            var fileNameProc = Process.Start(new ProcessStartInfo()
+            {
+                FileName = "yt-dlp",
+                Arguments = $"--no-playlist --get-filename -o \"{formatPath}\" \"{url}\"",
+                RedirectStandardOutput = true
+            });
 
-            return new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.DeleteOnClose);
+            await fileNameProc!.WaitForExitAsync(cancellationToken);
+
+            var filePath = await fileNameProc.StandardOutput.ReadToEndAsync(cancellationToken);
+            filePath = filePath.TrimEnd('\n');
+
+            await Process.Start("yt-dlp", $"--no-playlist --fixup never -o \"{filePath}\" \"{url}\"").WaitForExitAsync(cancellationToken);
+
+            return new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.DeleteOnClose);
         }
 
         private async Task<Song> CreateYoutubeSong(string url)
